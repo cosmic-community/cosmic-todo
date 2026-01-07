@@ -31,7 +31,6 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     setIsSubmitting(true)
     
     // Create optimistic task with temporary ID
-    // Note: 'starred' is optional and may not exist in the content model
     const optimisticTask: Task = {
       id: `temp-${Date.now()}`,
       slug: `temp-${Date.now()}`,
@@ -82,18 +81,18 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-gray-900 rounded-xl text-gray-400 hover:text-gray-300 hover:bg-gray-800 transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-900 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-800"
       >
-        <Plus className="w-5 h-5 text-indigo-400" />
+        <Plus className="w-5 h-5 text-blue-600" />
         <span>Add a Task</span>
       </button>
     )
   }
   
   return (
-    <form onSubmit={handleSubmit} className="bg-gray-900 rounded-xl px-4 py-3">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800">
       <div className="flex items-center gap-3">
-        <div className="w-6 h-6 rounded-full border-2 border-gray-500 flex-shrink-0" />
+        <div className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-600 flex-shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -106,7 +105,7 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
             }
           }}
           placeholder="Add a Task"
-          className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-base"
+          className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-base"
           disabled={isSubmitting}
         />
       </div>

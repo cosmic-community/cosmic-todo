@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import CosmicBadge from '@/components/CosmicBadge'
+import ThemeProvider from '@/components/ThemeProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,11 +19,13 @@ export default function RootLayout({
   const bucketSlug = process.env.COSMIC_BUCKET_SLUG as string
   
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        {children}
-        <CosmicBadge bucketSlug={bucketSlug} />
-        <script src="/dashboard-console-capture.js"></script>
+        <ThemeProvider>
+          {children}
+          <CosmicBadge bucketSlug={bucketSlug} />
+          <script src="/dashboard-console-capture.js"></script>
+        </ThemeProvider>
       </body>
     </html>
   )

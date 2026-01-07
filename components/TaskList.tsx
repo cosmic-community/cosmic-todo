@@ -82,14 +82,6 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     setTimeout(fetchTasks, 500)
   }, [fetchTasks])
 
-  const handleOptimisticStar = useCallback((taskId: string) => {
-    setTasks(prev => prev.map(task =>
-      task.id === taskId
-        ? { ...task, metadata: { ...task.metadata, starred: !task.metadata.starred } }
-        : task
-    ))
-  }, [])
-
   const pendingTasks = tasks.filter(task => !task.metadata.completed)
   const completedTasks = tasks.filter(task => task.metadata.completed)
   
@@ -111,7 +103,6 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
           onOptimisticToggle={handleOptimisticToggle}
           onOptimisticDelete={handleOptimisticDelete}
           onOptimisticUpdate={handleOptimisticUpdate}
-          onOptimisticStar={handleOptimisticStar}
         />
       ))}
       
@@ -120,7 +111,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
         <div className="pt-4">
           <button
             onClick={() => setShowCompleted(!showCompleted)}
-            className="flex items-center gap-2 text-gray-400 hover:text-gray-300 transition-colors py-2"
+            className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors py-2"
           >
             <ChevronRight className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-90' : ''}`} />
             <span className="text-sm font-medium">Completed ({completedTasks.length})</span>
@@ -136,7 +127,6 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
                   onOptimisticToggle={handleOptimisticToggle}
                   onOptimisticDelete={handleOptimisticDelete}
                   onOptimisticUpdate={handleOptimisticUpdate}
-                  onOptimisticStar={handleOptimisticStar}
                 />
               ))}
             </div>
@@ -147,7 +137,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
       {/* Empty State */}
       {pendingTasks.length === 0 && completedTasks.length === 0 && (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No tasks yet. Add your first task below!</p>
+          <p className="text-gray-500 dark:text-gray-400 text-lg">No tasks yet. Add your first task below!</p>
         </div>
       )}
       

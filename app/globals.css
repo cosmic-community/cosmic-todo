@@ -8,7 +8,11 @@
   }
   
   body {
-    @apply bg-black text-white antialiased;
+    @apply bg-gray-50 text-gray-900 antialiased transition-colors duration-200;
+  }
+  
+  body.dark {
+    @apply bg-black text-white;
   }
 }
 

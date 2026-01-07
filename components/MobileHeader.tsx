@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { List } from '@/types'
 import { Menu, X, CheckSquare, ListTodo } from 'lucide-react'
+import ThemeToggle from './ThemeToggle'
 
 interface MobileHeaderProps {
   lists: List[]
@@ -15,37 +16,40 @@ export default function MobileHeader({ lists, currentList }: MobileHeaderProps) 
   
   return (
     <>
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
+      <header className="md:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-blue-600" />
-            <h1 className="text-lg font-bold text-gray-900">
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
               {currentList ? currentList.title : 'All Tasks'}
             </h1>
           </div>
           
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 text-gray-600 hover:text-gray-900"
-            aria-label="Toggle menu"
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              aria-label="Toggle menu"
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </header>
       
       {/* Mobile Menu Overlay */}
       {isMenuOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-black bg-opacity-50" onClick={() => setIsMenuOpen(false)}>
-          <nav className="fixed top-16 left-0 right-0 bg-white border-b border-gray-200 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <nav className="fixed top-16 left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg max-h-[calc(100vh-4rem)] overflow-y-auto">
             <div className="p-4 space-y-1">
               <Link
                 href="/"
                 onClick={() => setIsMenuOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                   !currentList
-                    ? 'bg-blue-50 text-blue-600'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <ListTodo className="w-5 h-5" />
@@ -55,7 +59,7 @@ export default function MobileHeader({ lists, currentList }: MobileHeaderProps) 
               {lists.length > 0 && (
                 <>
                   <div className="pt-4 pb-2 px-3">
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Lists
                     </h3>
                   </div>
@@ -67,8 +71,8 @@ export default function MobileHeader({ lists, currentList }: MobileHeaderProps) 
                       onClick={() => setIsMenuOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                         currentList?.slug === list.slug
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-gray-700 hover:bg-gray-50'
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                       }`}
                     >
                       <div 
