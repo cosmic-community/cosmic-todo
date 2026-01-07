@@ -47,7 +47,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ list: response.object }, { status: 201 })
+    // Changed: Return the full list object with all properties
+    return NextResponse.json({ 
+      list: {
+        id: response.object.id,
+        slug: response.object.slug,
+        title: response.object.title,
+        type: response.object.type,
+        created_at: response.object.created_at,
+        modified_at: response.object.modified_at,
+        metadata: response.object.metadata
+      }
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating list:', error)
     return NextResponse.json(

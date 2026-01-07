@@ -12,11 +12,12 @@ interface SidebarProps {
   lists: List[]
   currentListSlug?: string
   onListCreated?: (list: List) => void
+  onListReplaced?: (tempId: string, realList: List) => void
   onListUpdated?: (listId: string, updates: Partial<List['metadata']>) => void
   onListDeleted?: (listId: string) => void
 }
 
-export default function Sidebar({ lists, currentListSlug, onListCreated, onListUpdated, onListDeleted }: SidebarProps) {
+export default function Sidebar({ lists, currentListSlug, onListCreated, onListReplaced, onListUpdated, onListDeleted }: SidebarProps) {
   const [editingList, setEditingList] = useState<List | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -36,6 +37,13 @@ export default function Sidebar({ lists, currentListSlug, onListCreated, onListU
   const handleListCreated = (list: List) => {
     if (onListCreated) {
       onListCreated(list)
+    }
+  }
+
+  // Changed: Add handler to pass through list replacement
+  const handleListReplaced = (tempId: string, realList: List) => {
+    if (onListReplaced) {
+      onListReplaced(tempId, realList)
     }
   }
 
@@ -166,7 +174,10 @@ export default function Sidebar({ lists, currentListSlug, onListCreated, onListU
 
             {/* Create List Form */}
             <div className="pt-4">
-              <CreateListForm onListCreated={handleListCreated} />
+              <CreateListForm 
+                onListCreated={handleListCreated}
+                onListReplaced={handleListReplaced}
+              />
             </div>
           </nav>
         </div>

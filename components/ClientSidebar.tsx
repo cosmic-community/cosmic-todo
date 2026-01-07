@@ -24,7 +24,19 @@ export default function ClientSidebar({ currentListSlug }: ClientSidebarProps) {
         const filteredLists = (data.lists as List[]).filter(
           list => !deletedListIds.current.has(list.id)
         )
-        setLists(filteredLists)
+        
+        // Changed: Only update lists if they don't have temporary IDs
+        // This prevents replacing optimistic updates with fetched data
+        setLists(prevLists => {
+          // Keep any lists with temporary IDs from optimistic updates
+          const tempLists = prevLists.filter(list => list.id.startsWith('temp-'))
+          
+          // Merge temporary lists with fetched lists, avoiding duplicates
+          const fetchedIds = new Set(filteredLists.map(list => list.id))
+          const uniqueTempLists = tempLists.filter(list => !fetchedIds.has(list.id))
+          
+          return [...filteredLists, ...uniqueTempLists]
+        })
       }
     } catch (error) {
       console.error('Error fetching lists:', error)
@@ -42,6 +54,15 @@ export default function ClientSidebar({ currentListSlug }: ClientSidebarProps) {
   const handleListCreated = (newList: List) => {
     // Optimistically add the new list
     setLists(prevLists => [...prevLists, newList])
+  }
+
+  // Changed: Add handler to replace optimistic list with real one
+  const handleListReplaced = (tempId: string, realList: List) => {
+    setLists(prevLists => 
+      prevLists.map(list => 
+        list.id === tempId ? realList : list
+      )
+    )
   }
 
   const handleListUpdated = (listId: string, updates: Partial<List['metadata']>) => {
@@ -81,6 +102,7 @@ export default function ClientSidebar({ currentListSlug }: ClientSidebarProps) {
       lists={lists} 
       currentListSlug={currentListSlug} 
       onListCreated={handleListCreated}
+      onListReplaced={handleListReplaced}
       onListUpdated={handleListUpdated}
       onListDeleted={handleListDeleted}
     />
