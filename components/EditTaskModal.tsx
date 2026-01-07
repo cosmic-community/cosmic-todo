@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Task, List } from '@/types'
+import { Task, List, TaskPriority } from '@/types'
 import { X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
@@ -92,7 +92,7 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
             </label>
             <select
               value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="low">Low Priority</option>
