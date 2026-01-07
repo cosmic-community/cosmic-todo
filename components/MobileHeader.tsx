@@ -383,7 +383,7 @@ export default function MobileHeader({ lists, currentList, onListDeleted, onList
       
       {/* Delete Confirmation Modal */}
       {listToDelete && (
-        <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="md:hidden fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-sm w-full p-4 space-y-4">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Delete List</h3>
             <p className="text-gray-700 dark:text-gray-300">
@@ -413,7 +413,7 @@ export default function MobileHeader({ lists, currentList, onListDeleted, onList
       
       {/* Edit List Modal */}
       {editingList && (
-        <div className="md:hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="md:hidden fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-sm w-full p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white">Edit List</h3>
