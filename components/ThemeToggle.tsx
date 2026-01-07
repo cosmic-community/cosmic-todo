@@ -13,12 +13,13 @@ export default function ThemeToggle() {
     setMounted(true)
   }, [])
 
-  // Changed: Show a placeholder during SSR to prevent hydration errors
+  // Changed: Show a stable placeholder during SSR to prevent hydration errors
   if (!mounted) {
     return (
       <button
         className="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
         aria-label="Toggle theme"
+        disabled
       >
         <div className="w-5 h-5" />
       </button>
