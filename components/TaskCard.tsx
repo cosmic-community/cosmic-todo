@@ -13,7 +13,7 @@ interface TaskCardProps {
   onSyncComplete?: (taskId: string) => void
 }
 
-// Changed: Improved confetti particle with more dynamic positioning
+// Changed: Improved confetti particle with smoother animation
 function ConfettiParticle({ delay, color, index }: { delay: number; color: string; index: number }) {
   // Create varied horizontal positions based on index
   const leftPosition = 20 + (index * 10) % 60
@@ -50,15 +50,20 @@ export default function TaskCard({
     if (!prevCompletedRef.current && task.metadata.completed) {
       setShowCelebration(true)
       
-      // Start fade out after confetti shows
-      setTimeout(() => {
+      // Changed: Smoother timing - start fade out after confetti peaks (400ms)
+      const fadeTimer = setTimeout(() => {
         setIsFadingOut(true)
-      }, 600)
+      }, 400)
       
-      // Hide celebration after animation completes
-      setTimeout(() => {
+      // Changed: Hide celebration after fade completes (800ms total)
+      const hideTimer = setTimeout(() => {
         setShowCelebration(false)
-      }, 1000)
+      }, 800)
+      
+      return () => {
+        clearTimeout(fadeTimer)
+        clearTimeout(hideTimer)
+      }
     }
     
     // Changed: Update ref after checking
@@ -121,22 +126,23 @@ export default function TaskCard({
   const confettiColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
   
   return (
-    <div className={`relative transition-all duration-700 ease-out ${
+    // Changed: Smoother transition with better easing - using ease-in-out for natural feel
+    <div className={`relative transition-all duration-500 ease-in-out ${
       isFadingOut && task.metadata.completed 
-        ? 'opacity-0 scale-95 -translate-y-2 max-h-0 py-0 overflow-hidden' 
-        : 'opacity-100 scale-100 max-h-24'
+        ? 'opacity-0 scale-98 -translate-y-1 max-h-0 py-0 my-0 overflow-hidden' 
+        : 'opacity-100 scale-100 translate-y-0 max-h-20'
     }`}>
       {/* Changed: Enhanced confetti celebration overlay */}
       {showCelebration && (
         <div className="absolute inset-0 overflow-visible pointer-events-none z-20">
           {confettiColors.map((color, i) => (
-            <ConfettiParticle key={`a-${i}`} delay={i * 30} color={color} index={i} />
+            <ConfettiParticle key={`a-${i}`} delay={i * 25} color={color} index={i} />
           ))}
           {confettiColors.map((color, i) => (
-            <ConfettiParticle key={`b-${i}`} delay={i * 30 + 80} color={color} index={i + 3} />
+            <ConfettiParticle key={`b-${i}`} delay={i * 25 + 60} color={color} index={i + 3} />
           ))}
           {confettiColors.slice(0, 4).map((color, i) => (
-            <ConfettiParticle key={`c-${i}`} delay={i * 30 + 160} color={color} index={i + 6} />
+            <ConfettiParticle key={`c-${i}`} delay={i * 25 + 120} color={color} index={i + 6} />
           ))}
         </div>
       )}
@@ -155,13 +161,14 @@ export default function TaskCard({
           aria-label={task.metadata.completed ? 'Mark as incomplete' : 'Mark as complete'}
           disabled={isUpdating}
         >
-          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+          {/* Changed: Smoother checkbox animation with better easing */}
+          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ease-out ${
             task.metadata.completed
               ? 'bg-blue-600 border-blue-600'
               : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-          } ${showCelebration ? 'scale-125 ring-4 ring-blue-200 dark:ring-blue-900' : ''}`}>
+          } ${showCelebration ? 'scale-110 ring-4 ring-blue-200/50 dark:ring-blue-900/50' : ''}`}>
             {task.metadata.completed && (
-              <svg className={`w-3 h-3 text-white transition-transform duration-300 ${showCelebration ? 'scale-125' : ''}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`w-3 h-3 text-white transition-transform duration-200 ease-out ${showCelebration ? 'scale-110' : ''}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                 <path d="M5 13l4 4L19 7"></path>
               </svg>
             )}
@@ -169,7 +176,7 @@ export default function TaskCard({
         </button>
         
         {/* Title */}
-        <span className={`flex-1 text-base transition-all duration-300 ${
+        <span className={`flex-1 text-base transition-all duration-300 ease-out ${
           task.metadata.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
         }`}>
           {task.metadata.title}

@@ -129,7 +129,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     // This prevents the flicker where the task disappears then reappears
   }, [])
 
-  // Changed: Updated toggle handler to track celebrating tasks
+  // Changed: Updated toggle handler to track celebrating tasks with smoother timing
   const handleOptimisticToggle = useCallback((taskId: string) => {
     setTasks(prev => {
       const task = prev.find(t => t.id === taskId)
@@ -146,14 +146,14 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
             return newSet
           })
           
-          // Changed: Remove from celebrating after animation completes (1.2s total)
+          // Changed: Remove from celebrating after animation completes (900ms - matches CSS timing)
           setTimeout(() => {
             setCelebratingTasks(prevCelebrating => {
               const newSet = new Set(prevCelebrating)
               newSet.delete(taskId)
               return newSet
             })
-          }, 1200)
+          }, 900)
         }
       }
       

@@ -57,26 +57,34 @@
     font-size: 16px !important;
     -webkit-text-size-adjust: 100%;
   }
+  
+  /* Changed: Custom scale utility for smoother animation */
+  .scale-98 {
+    --tw-scale-x: 0.98;
+    --tw-scale-y: 0.98;
+    transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+  }
 }
 
-/* Changed: Enhanced confetti animation for task completion celebration */
+/* Changed: Smoother confetti animation with natural easing curve */
 @keyframes confetti {
   0% {
     transform: translateY(0) translateX(0) rotate(0deg) scale(1);
     opacity: 1;
   }
-  25% {
+  20% {
     opacity: 1;
   }
   100% {
-    transform: translateY(-80px) translateX(var(--confetti-x, 10px)) rotate(720deg) scale(0);
+    transform: translateY(-70px) translateX(var(--confetti-x, 10px)) rotate(540deg) scale(0.3);
     opacity: 0;
   }
 }
 
+/* Changed: Faster, smoother animation with ease-out for natural deceleration */
 .animate-confetti {
   --confetti-x: 10px;
-  animation: confetti 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: confetti 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .animate-confetti:nth-child(odd) {
@@ -89,4 +97,13 @@
 
 .animate-confetti:nth-child(4n) {
   --confetti-x: -25px;
+}
+
+/* Changed: Additional confetti variation for more organic feel */
+.animate-confetti:nth-child(5n) {
+  --confetti-x: 8px;
+}
+
+.animate-confetti:nth-child(6n) {
+  --confetti-x: -12px;
 }

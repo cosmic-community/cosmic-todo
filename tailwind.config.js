@@ -20,8 +20,9 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
       },
+      // Changed: Updated animation with smoother timing
       animation: {
-        confetti: 'confetti 0.8s ease-out forwards',
+        confetti: 'confetti 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
       },
       keyframes: {
         confetti: {
@@ -29,14 +30,22 @@ module.exports = {
             transform: 'translateY(0) rotate(0deg) scale(1)',
             opacity: '1',
           },
-          '50%': {
+          '20%': {
             opacity: '1',
           },
           '100%': {
-            transform: 'translateY(-60px) rotate(720deg) scale(0)',
+            transform: 'translateY(-70px) rotate(540deg) scale(0.3)',
             opacity: '0',
           },
         },
+      },
+      // Changed: Added custom scale for smoother transitions
+      scale: {
+        '98': '0.98',
+      },
+      // Changed: Added max-height for smoother collapse
+      maxHeight: {
+        '20': '5rem',
       },
     },
   },
