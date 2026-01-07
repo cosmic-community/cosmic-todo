@@ -1,21 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X } from 'lucide-react'
-import type { Task } from '@/types'
+import type { Task, List, TaskPriority } from '@/types'
 
 interface EditTaskModalProps {
   task: Task
+  lists: List[]
   onClose: () => void
-  onSave: (taskId: string, updates: any) => void
+  onOptimisticUpdate: (taskId: string, updates: Partial<Task['metadata']>) => void
 }
 
-export default function EditTaskModal({ task, onClose, onSave }: EditTaskModalProps) {
+export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate }: EditTaskModalProps) {
   const [title, setTitle] = useState(task.metadata.title)
   const [description, setDescription] = useState(task.metadata.description || '')
-  const [priority, setPriority] = useState(task.metadata.priority?.key || 'medium')
+  const [priority, setPriority] = useState<TaskPriority>(task.metadata.priority?.key || 'medium')
   const [dueDate, setDueDate] = useState(task.metadata.due_date || '')
-  // Changed: Added null check and type guard for task.metadata.list before accessing id property
   const [listId, setListId] = useState(
     task.metadata.list && typeof task.metadata.list === 'object' 
       ? task.metadata.list.id 
@@ -27,14 +27,32 @@ export default function EditTaskModal({ task, onClose, onSave }: EditTaskModalPr
     e.preventDefault()
     setIsLoading(true)
 
+    // Optimistic update
+    onOptimisticUpdate(task.id, {
+      title,
+      description: description || undefined,
+      priority: { key: priority, value: priority.charAt(0).toUpperCase() + priority.slice(1) },
+      due_date: dueDate || undefined,
+      list: listId || undefined
+    })
+
     try {
-      await onSave(task.id, {
-        title,
-        description,
-        priority,
-        due_date: dueDate,
-        list_id: listId
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          description,
+          priority,
+          due_date: dueDate,
+          list: listId
+        })
       })
+
+      if (!response.ok) {
+        throw new Error('Failed to update task')
+      }
+
       onClose()
     } catch (error) {
       console.error('Error updating task:', error)
@@ -92,7 +110,7 @@ export default function EditTaskModal({ task, onClose, onSave }: EditTaskModalPr
             <select
               id="priority"
               value={priority}
-              onChange={(e) => setPriority(e.target.value)}
+              onChange={(e) => setPriority(e.target.value as TaskPriority)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="low">Low</option>
@@ -112,6 +130,25 @@ export default function EditTaskModal({ task, onClose, onSave }: EditTaskModalPr
               onChange={(e) => setDueDate(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
             />
+          </div>
+
+          <div>
+            <label htmlFor="list" className="block text-sm font-medium mb-1">
+              List
+            </label>
+            <select
+              id="list"
+              value={listId}
+              onChange={(e) => setListId(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">No List</option>
+              {lists.map(list => (
+                <option key={list.id} value={list.id}>
+                  {list.metadata.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="flex gap-3 pt-4">

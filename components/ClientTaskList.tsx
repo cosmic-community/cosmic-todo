@@ -7,129 +7,84 @@ import AddTaskForm from './AddTaskForm'
 import type { Task, List } from '@/types'
 
 interface ClientTaskListProps {
-  initialTasks: Task[]
   listId?: string
   listSlug?: string
 }
 
-export default function ClientTaskList({ initialTasks, listId, listSlug }: ClientTaskListProps) {
-  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps) {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [lists, setLists] = useState<List[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
+  // Fetch tasks and lists
   useEffect(() => {
-    setTasks(initialTasks)
-  }, [initialTasks])
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Fetch tasks
+        const tasksUrl = listId 
+          ? `/api/tasks?list=${listId}` 
+          : '/api/tasks'
+        const tasksResponse = await fetch(tasksUrl)
+        if (tasksResponse.ok) {
+          const tasksData = await tasksResponse.json()
+          setTasks(tasksData.tasks || [])
+        }
 
-  const handleTaskComplete = async (taskId: string) => {
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
+        // Fetch lists
+        const listsResponse = await fetch('/api/lists')
+        if (listsResponse.ok) {
+          const listsData = await listsResponse.json()
+          setLists(listsData.lists || [])
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    const newCompletedState = !task.metadata.completed
+    fetchData()
+  }, [listId])
 
+  const handleOptimisticToggle = (taskId: string) => {
     setTasks(tasks.map(t => 
       t.id === taskId 
-        ? { ...t, metadata: { ...t.metadata, completed: newCompletedState } }
+        ? { ...t, metadata: { ...t.metadata, completed: !t.metadata.completed } }
         : t
     ))
-
-    try {
-      // Changed: Added null check for task.metadata.list before accessing slug property
-      const taskListSlug = task.metadata.list && typeof task.metadata.list === 'object' 
-        ? task.metadata.list.slug 
-        : null
-
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          metadata: {
-            completed: newCompletedState
-          }
-        })
-      })
-
-      if (!response.ok) {
-        setTasks(tasks.map(t => 
-          t.id === taskId 
-            ? { ...t, metadata: { ...t.metadata, completed: !newCompletedState } }
-            : t
-        ))
-        throw new Error('Failed to update task')
-      }
-
-      if (taskListSlug) {
-        setTimeout(() => {
-          window.location.href = `/lists/${taskListSlug}`
-        }, 600)
-      } else {
-        setTimeout(() => {
-          window.location.href = '/'
-        }, 600)
-      }
-    } catch (error) {
-      console.error('Error updating task:', error)
-    }
   }
 
-  const handleTaskDelete = async (taskId: string) => {
-    if (!confirm('Are you sure you want to delete this task?')) return
-
+  const handleOptimisticDelete = (taskId: string) => {
     setTasks(tasks.filter(t => t.id !== taskId))
-
-    try {
-      const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) {
-        setTasks(tasks)
-        throw new Error('Failed to delete task')
-      }
-
-      window.location.reload()
-    } catch (error) {
-      console.error('Error deleting task:', error)
-      setTasks(tasks)
-    }
   }
 
-  const handleAddTask = async (title: string, description: string, priority: string, dueDate: string) => {
-    setIsLoading(true)
-    try {
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description,
-          priority,
-          due_date: dueDate,
-          list_id: listId
-        })
-      })
+  const handleOptimisticUpdate = (taskId: string, updates: Partial<Task['metadata']>) => {
+    setTasks(tasks.map(t => 
+      t.id === taskId 
+        ? { ...t, metadata: { ...t.metadata, ...updates } }
+        : t
+    ))
+  }
 
-      if (!response.ok) throw new Error('Failed to create task')
-
-      const { task } = await response.json()
-      setTasks([...tasks, task])
-      setShowAddForm(false)
-
-      if (listSlug) {
-        window.location.href = `/lists/${listSlug}`
-      } else {
-        window.location.href = '/'
-      }
-    } catch (error) {
-      console.error('Error creating task:', error)
-      alert('Failed to create task')
-    } finally {
-      setIsLoading(false)
-    }
+  const handleOptimisticAdd = (task: Task) => {
+    setTasks([...tasks, task])
   }
 
   const completedTasks = tasks.filter(t => t.metadata.completed)
   const incompleteTasks = tasks.filter(t => !t.metadata.completed)
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="text-center text-gray-500 dark:text-gray-400">
+          Loading tasks...
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
@@ -138,8 +93,10 @@ export default function ClientTaskList({ initialTasks, listId, listSlug }: Clien
           <TaskCard
             key={task.id}
             task={task}
-            onComplete={handleTaskComplete}
-            onDelete={handleTaskDelete}
+            lists={lists}
+            onOptimisticToggle={handleOptimisticToggle}
+            onOptimisticDelete={handleOptimisticDelete}
+            onOptimisticUpdate={handleOptimisticUpdate}
           />
         ))}
       </div>
@@ -156,9 +113,9 @@ export default function ClientTaskList({ initialTasks, listId, listSlug }: Clien
 
       {showAddForm && (
         <AddTaskForm
-          onSubmit={handleAddTask}
-          onCancel={() => setShowAddForm(false)}
-          isLoading={isLoading}
+          lists={lists}
+          listSlug={listSlug}
+          onOptimisticAdd={handleOptimisticAdd}
         />
       )}
 
@@ -172,8 +129,10 @@ export default function ClientTaskList({ initialTasks, listId, listSlug }: Clien
               <TaskCard
                 key={task.id}
                 task={task}
-                onComplete={handleTaskComplete}
-                onDelete={handleTaskDelete}
+                lists={lists}
+                onOptimisticToggle={handleOptimisticToggle}
+                onOptimisticDelete={handleOptimisticDelete}
+                onOptimisticUpdate={handleOptimisticUpdate}
               />
             ))}
           </div>

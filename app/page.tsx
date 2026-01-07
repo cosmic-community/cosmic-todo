@@ -8,10 +8,8 @@ import ClientListHeader from '@/components/ClientListHeader'
 import AuthGuard from '@/components/AuthGuard'
 
 function TodoApp() {
-  // Changed: Manage current list slug in state for client-side navigation
   const [currentListSlug, setCurrentListSlug] = useState<string | undefined>(undefined)
 
-  // Changed: Handle list changes without page refresh
   const handleListChange = (slug?: string) => {
     setCurrentListSlug(slug)
   }
@@ -27,7 +25,6 @@ function TodoApp() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-16 md:pt-0">
         <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
-          {/* Changed: Show list header or default header */}
           {currentListSlug ? (
             <ClientListHeader listSlug={currentListSlug} />
           ) : (
