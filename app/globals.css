@@ -59,21 +59,34 @@
   }
 }
 
-/* Confetti animation for task completion celebration */
+/* Changed: Enhanced confetti animation for task completion celebration */
 @keyframes confetti {
   0% {
-    transform: translateY(0) rotate(0deg) scale(1);
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
     opacity: 1;
   }
-  50% {
+  25% {
     opacity: 1;
   }
   100% {
-    transform: translateY(-60px) rotate(720deg) scale(0);
+    transform: translateY(-80px) translateX(var(--confetti-x, 10px)) rotate(720deg) scale(0);
     opacity: 0;
   }
 }
 
 .animate-confetti {
-  animation: confetti 0.8s ease-out forwards;
+  --confetti-x: 10px;
+  animation: confetti 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-confetti:nth-child(odd) {
+  --confetti-x: -15px;
+}
+
+.animate-confetti:nth-child(3n) {
+  --confetti-x: 20px;
+}
+
+.animate-confetti:nth-child(4n) {
+  --confetti-x: -25px;
 }

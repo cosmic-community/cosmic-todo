@@ -18,6 +18,12 @@ interface PendingTaskState {
   // Add other fields here as needed for other optimistic updates
 }
 
+// Track tasks that are celebrating (just completed)
+interface CelebratingTask {
+  taskId: string
+  timestamp: number
+}
+
 export default function TaskList({ initialTasks, lists, listSlug }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false)
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
@@ -27,6 +33,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   const pendingNewTasksRef = useRef<Set<string>>(new Set())
   // Track pending state changes for existing tasks (keyed by task ID)
   const pendingStateChangesRef = useRef<Map<string, PendingTaskState>>(new Map())
+  // Changed: Track tasks that are currently celebrating (showing confetti + fade out)
+  const [celebratingTasks, setCelebratingTasks] = useState<Set<string>>(new Set())
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async () => {
@@ -121,6 +129,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     // This prevents the flicker where the task disappears then reappears
   }, [])
 
+  // Changed: Updated toggle handler to track celebrating tasks
   const handleOptimisticToggle = useCallback((taskId: string) => {
     setTasks(prev => {
       const task = prev.find(t => t.id === taskId)
@@ -128,6 +137,24 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
         // Track the new completed state as pending
         const newCompletedState = !task.metadata.completed
         pendingStateChangesRef.current.set(taskId, { completed: newCompletedState })
+        
+        // Changed: If task is becoming completed, add to celebrating set
+        if (newCompletedState) {
+          setCelebratingTasks(prevCelebrating => {
+            const newSet = new Set(prevCelebrating)
+            newSet.add(taskId)
+            return newSet
+          })
+          
+          // Changed: Remove from celebrating after animation completes (1.2s total)
+          setTimeout(() => {
+            setCelebratingTasks(prevCelebrating => {
+              const newSet = new Set(prevCelebrating)
+              newSet.delete(taskId)
+              return newSet
+            })
+          }, 1200)
+        }
       }
       
       return prev.map(task => 
@@ -144,6 +171,12 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     // Remove from all pending tracking
     pendingNewTasksRef.current.delete(taskId)
     pendingStateChangesRef.current.delete(taskId)
+    // Changed: Also remove from celebrating if deleting
+    setCelebratingTasks(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(taskId)
+      return newSet
+    })
     setTasks(prev => prev.filter(task => task.id !== taskId))
   }, [])
 
@@ -167,8 +200,10 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     pendingStateChangesRef.current.delete(taskId)
   }, [])
 
-  const pendingTasks = tasks.filter(task => !task.metadata.completed)
-  const completedTasks = tasks.filter(task => task.metadata.completed)
+  // Changed: Include celebrating tasks in pending list so they stay visible during animation
+  const pendingTasks = tasks.filter(task => !task.metadata.completed || celebratingTasks.has(task.id))
+  // Changed: Exclude celebrating tasks from completed list temporarily
+  const completedTasks = tasks.filter(task => task.metadata.completed && !celebratingTasks.has(task.id))
   
   return (
     <>

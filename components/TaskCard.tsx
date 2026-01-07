@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Task, List } from '@/types'
 import { Trash2 } from 'lucide-react'
 
@@ -13,14 +13,18 @@ interface TaskCardProps {
   onSyncComplete?: (taskId: string) => void
 }
 
-// Simple confetti particle component
-function ConfettiParticle({ delay, color }: { delay: number; color: string }) {
+// Changed: Improved confetti particle with more dynamic positioning
+function ConfettiParticle({ delay, color, index }: { delay: number; color: string; index: number }) {
+  // Create varied horizontal positions based on index
+  const leftPosition = 20 + (index * 10) % 60
+  
   return (
     <div
       className="absolute w-2 h-2 rounded-full animate-confetti pointer-events-none"
       style={{
         backgroundColor: color,
-        left: `${Math.random() * 100}%`,
+        left: `${leftPosition}%`,
+        top: '50%',
         animationDelay: `${delay}ms`,
       }}
     />
@@ -38,24 +42,28 @@ export default function TaskCard({
   const [showCelebration, setShowCelebration] = useState(false)
   const [isFadingOut, setIsFadingOut] = useState(false)
   
-  // Track when task becomes completed to trigger celebration
-  const [wasCompleted, setWasCompleted] = useState(task.metadata.completed)
+  // Changed: Track previous completed state with ref to detect transitions
+  const prevCompletedRef = useRef(task.metadata.completed)
   
   useEffect(() => {
-    // If task just became completed (wasn't before, is now)
-    if (!wasCompleted && task.metadata.completed) {
+    // Changed: If task just became completed (wasn't before, is now)
+    if (!prevCompletedRef.current && task.metadata.completed) {
       setShowCelebration(true)
-      // Start fade out after celebration
+      
+      // Start fade out after confetti shows
       setTimeout(() => {
         setIsFadingOut(true)
       }, 600)
-      // Hide celebration after animation
+      
+      // Hide celebration after animation completes
       setTimeout(() => {
         setShowCelebration(false)
-      }, 800)
+      }, 1000)
     }
-    setWasCompleted(task.metadata.completed)
-  }, [task.metadata.completed, wasCompleted])
+    
+    // Changed: Update ref after checking
+    prevCompletedRef.current = task.metadata.completed
+  }, [task.metadata.completed])
   
   const handleToggleComplete = async () => {
     if (isUpdating) return
@@ -109,19 +117,26 @@ export default function TaskCard({
     }
   }
   
-  // Confetti colors
-  const confettiColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+  // Changed: More vibrant confetti colors
+  const confettiColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
   
   return (
-    <div className={`relative transition-all duration-500 ${isFadingOut && task.metadata.completed ? 'opacity-0 scale-95 -translate-y-2' : 'opacity-100 scale-100'}`}>
-      {/* Confetti celebration overlay */}
+    <div className={`relative transition-all duration-700 ease-out ${
+      isFadingOut && task.metadata.completed 
+        ? 'opacity-0 scale-95 -translate-y-2 max-h-0 py-0 overflow-hidden' 
+        : 'opacity-100 scale-100 max-h-24'
+    }`}>
+      {/* Changed: Enhanced confetti celebration overlay */}
       {showCelebration && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+        <div className="absolute inset-0 overflow-visible pointer-events-none z-20">
           {confettiColors.map((color, i) => (
-            <ConfettiParticle key={i} delay={i * 50} color={color} />
+            <ConfettiParticle key={`a-${i}`} delay={i * 30} color={color} index={i} />
           ))}
           {confettiColors.map((color, i) => (
-            <ConfettiParticle key={i + 6} delay={i * 50 + 100} color={color} />
+            <ConfettiParticle key={`b-${i}`} delay={i * 30 + 80} color={color} index={i + 3} />
+          ))}
+          {confettiColors.slice(0, 4).map((color, i) => (
+            <ConfettiParticle key={`c-${i}`} delay={i * 30 + 160} color={color} index={i + 6} />
           ))}
         </div>
       )}
@@ -140,13 +155,13 @@ export default function TaskCard({
           aria-label={task.metadata.completed ? 'Mark as incomplete' : 'Mark as complete'}
           disabled={isUpdating}
         >
-          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
             task.metadata.completed
               ? 'bg-blue-600 border-blue-600'
               : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-          } ${showCelebration ? 'scale-125' : ''}`}>
+          } ${showCelebration ? 'scale-125 ring-4 ring-blue-200 dark:ring-blue-900' : ''}`}>
             {task.metadata.completed && (
-              <svg className={`w-3 h-3 text-white transition-transform ${showCelebration ? 'scale-110' : ''}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`w-3 h-3 text-white transition-transform duration-300 ${showCelebration ? 'scale-125' : ''}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                 <path d="M5 13l4 4L19 7"></path>
               </svg>
             )}
@@ -154,14 +169,14 @@ export default function TaskCard({
         </button>
         
         {/* Title */}
-        <span className={`flex-1 text-base transition-all ${
+        <span className={`flex-1 text-base transition-all duration-300 ${
           task.metadata.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
         }`}>
           {task.metadata.title}
         </span>
         
-        {/* Delete button - only show for completed tasks */}
-        {task.metadata.completed && (
+        {/* Delete button - only show for completed tasks that aren't celebrating */}
+        {task.metadata.completed && !showCelebration && (
           <button
             onClick={handleDelete}
             className="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
