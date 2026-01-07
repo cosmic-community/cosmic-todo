@@ -12,12 +12,18 @@ interface EditTaskModalProps {
 }
 
 export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate }: EditTaskModalProps) {
+  // Changed: Added type guard to safely extract list ID from string or List object
+  const getListId = (list: string | List | undefined): string => {
+    if (!list) return ''
+    return typeof list === 'string' ? list : list.id
+  }
+
   const [formData, setFormData] = useState({
     title: task.metadata.title,
     description: task.metadata.description || '',
     priority: task.metadata.priority?.key || 'medium',
     due_date: task.metadata.due_date || '',
-    list: task.metadata.list?.id || ''
+    list: getListId(task.metadata.list)
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)

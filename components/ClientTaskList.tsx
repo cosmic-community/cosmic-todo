@@ -34,9 +34,14 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
 
         let filteredTasks = tasksData.tasks as Task[]
         if (listSlug) {
-          filteredTasks = filteredTasks.filter(
-            task => task.metadata.list?.slug === listSlug
-          )
+          // Changed: Added type guard to handle both string and List object cases
+          filteredTasks = filteredTasks.filter(task => {
+            const list = task.metadata.list
+            if (!list) return false
+            // Handle both string (ID) and List object cases
+            const taskListSlug = typeof list === 'string' ? null : list.slug
+            return taskListSlug === listSlug
+          })
         }
 
         setTasks(filteredTasks)
