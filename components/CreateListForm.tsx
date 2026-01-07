@@ -6,6 +6,8 @@ import { Plus, X } from 'lucide-react'
 
 interface CreateListFormProps {
   onListCreated: (list: List) => void
+  // Changed: Add callback to replace optimistic list with real one
+  onListReplaced?: (tempId: string, realList: List) => void
 }
 
 const PRESET_COLORS = [
@@ -19,7 +21,7 @@ const PRESET_COLORS = [
   '#84cc16', // Lime
 ]
 
-export default function CreateListForm({ onListCreated }: CreateListFormProps) {
+export default function CreateListForm({ onListCreated, onListReplaced }: CreateListFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -41,9 +43,10 @@ export default function CreateListForm({ onListCreated }: CreateListFormProps) {
     setIsSubmitting(true)
     setError('')
 
-    // Create optimistic list
+    // Changed: Create optimistic list with a temporary ID
+    const tempId = `temp-${Date.now()}`
     const optimisticList: List = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       title: name.trim(),
       type: 'lists',
@@ -59,8 +62,10 @@ export default function CreateListForm({ onListCreated }: CreateListFormProps) {
     // Optimistically add the list
     onListCreated(optimisticList)
 
-    // Reset form
+    // Prepare list data for API
     const listData = { name: name.trim(), description: description.trim(), color }
+    
+    // Reset form immediately for better UX
     setName('')
     setDescription('')
     setColor('#3b82f6')
@@ -77,9 +82,17 @@ export default function CreateListForm({ onListCreated }: CreateListFormProps) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to create list')
       }
+
+      // Changed: Get the real list from API and replace the optimistic one
+      const data = await response.json()
+      if (data.list && onListReplaced) {
+        onListReplaced(tempId, data.list)
+      }
     } catch (err) {
       console.error('Error creating list:', err)
       setError(err instanceof Error ? err.message : 'Failed to create list')
+      // Note: The optimistic list will remain unless we implement a rollback
+      // For now, the polling will correct it on the next fetch
     } finally {
       setIsSubmitting(false)
     }
