@@ -21,6 +21,16 @@ export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
+  // Changed: Add ref for title input to enable auto-focus
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  
+  // Changed: Add auto-focus effect for title input
+  useEffect(() => {
+    if (titleInputRef.current) {
+      titleInputRef.current.focus()
+      titleInputRef.current.select()
+    }
+  }, [])
   
   // Changed: Add escape key handler
   useEffect(() => {
@@ -107,6 +117,7 @@ export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate
               Title
             </label>
             <input
+              ref={titleInputRef}
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
