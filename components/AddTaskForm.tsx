@@ -14,6 +14,8 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
   const [isExpanded, setIsExpanded] = useState(false)
   const [title, setTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // Changed: Track when we need to refocus after submission
+  const [shouldRefocus, setShouldRefocus] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   
   const defaultList = lists.find(list => list.slug === listSlug)
@@ -23,6 +25,19 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
       inputRef.current.focus()
     }
   }, [isExpanded])
+  
+  // Changed: Effect to handle refocusing after task submission
+  useEffect(() => {
+    if (shouldRefocus && inputRef.current) {
+      // Use requestAnimationFrame to ensure DOM is ready
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus()
+        }
+      })
+      setShouldRefocus(false)
+    }
+  }, [shouldRefocus])
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,15 +66,8 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     // Reset form immediately but keep expanded
     const taskTitle = title
     setTitle('')
-    // Changed: Keep form expanded and refocus input instead of collapsing
-    // setIsExpanded(false) - removed to keep form open
-    
-    // Refocus the input after clearing
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus()
-      }
-    }, 0)
+    // Changed: Trigger refocus via state change to ensure it happens after re-render
+    setShouldRefocus(true)
     
     // Send to server in background
     try {
