@@ -11,7 +11,7 @@ export async function PATCH(
     const { id } = await params
     const data = await request.json()
     
-    const updateData: any = {}
+    const updateData: Record<string, unknown> = {}
     
     if (data.completed !== undefined) {
       updateData.completed = data.completed
@@ -44,9 +44,7 @@ export async function PATCH(
       metadata: updateData
     })
     
-    // Add small delay to allow Cosmic API to propagate changes
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    // Revalidate immediately - no delay needed with optimistic UI
     revalidatePath('/')
     revalidatePath('/lists/[slug]')
     
@@ -69,9 +67,7 @@ export async function DELETE(
     
     await cosmic.objects.deleteOne(id)
     
-    // Add small delay to allow Cosmic API to propagate changes
-    await new Promise(resolve => setTimeout(resolve, 100))
-    
+    // Revalidate immediately - no delay needed with optimistic UI
     revalidatePath('/')
     revalidatePath('/lists/[slug]')
     

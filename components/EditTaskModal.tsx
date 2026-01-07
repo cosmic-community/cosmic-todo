@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState } from 'react'
 import { Task, List, TaskPriority } from '@/types'
 import { X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -9,11 +9,11 @@ interface EditTaskModalProps {
   task: Task
   lists: List[]
   onClose: () => void
+  onOptimisticUpdate: (taskId: string, updates: Partial<Task['metadata']>) => void
 }
 
-export default function EditTaskModal({ task, lists, onClose }: EditTaskModalProps) {
+export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate }: EditTaskModalProps) {
   const router = useRouter()
-  const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     title: task.metadata.title,
     description: task.metadata.description || '',
@@ -26,30 +26,41 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
     e.preventDefault()
     if (!formData.title.trim()) return
     
-    // Close modal immediately for instant feedback
+    const selectedList = formData.list 
+      ? lists.find(l => l.id === formData.list) 
+      : undefined
+    
+    // Build optimistic updates
+    const optimisticUpdates: Partial<Task['metadata']> = {
+      title: formData.title,
+      description: formData.description || undefined,
+      priority: formData.priority ? {
+        key: formData.priority as TaskPriority,
+        value: formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1)
+      } : undefined,
+      due_date: formData.due_date || undefined,
+      list: selectedList
+    }
+    
+    // Optimistically update and close immediately
+    onOptimisticUpdate(task.id, optimisticUpdates)
     onClose()
     
-    // Use transition to make the update feel instant
-    startTransition(async () => {
-      try {
-        const response = await fetch(`/api/tasks/${task.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        })
-        
-        if (response.ok) {
-          // Wait a bit for the API to settle before refreshing
-          await new Promise(resolve => setTimeout(resolve, 150))
-          router.refresh()
-        } else {
-          alert('Failed to update task. Please try again.')
-        }
-      } catch (error) {
-        console.error('Error updating task:', error)
-        alert('Failed to update task. Please try again.')
+    // Send to server in background
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      })
+      
+      if (response.ok) {
+        router.refresh()
       }
-    })
+    } catch (error) {
+      console.error('Error updating task:', error)
+      router.refresh()
+    }
   }
   
   return (
@@ -61,7 +72,6 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
             aria-label="Close modal"
-            disabled={isPending}
           >
             <X className="w-6 h-6" />
           </button>
@@ -78,7 +88,6 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
-              disabled={isPending}
             />
           </div>
           
@@ -91,7 +100,6 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               rows={3}
-              disabled={isPending}
             />
           </div>
           
@@ -103,7 +111,6 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
               value={formData.priority}
               onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isPending}
             >
               <option value="low">Low Priority</option>
               <option value="medium">Medium Priority</option>
@@ -120,7 +127,6 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
               value={formData.due_date}
               onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isPending}
             />
           </div>
           
@@ -132,7 +138,6 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
               value={formData.list}
               onChange={(e) => setFormData({ ...formData, list: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={isPending}
             >
               <option value="">No List</option>
               {lists.map((list) => (
@@ -144,17 +149,16 @@ export default function EditTaskModal({ task, lists, onClose }: EditTaskModalPro
           <div className="flex items-center gap-2 pt-2">
             <button
               type="submit"
-              disabled={isPending || !formData.title.trim()}
+              disabled={!formData.title.trim()}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isPending ? 'Saving...' : 'Save Changes'}
+              Save Changes
             </button>
             
             <button
               type="button"
               onClick={onClose}
-              disabled={isPending}
-              className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               Cancel
             </button>

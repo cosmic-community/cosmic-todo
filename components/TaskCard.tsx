@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useOptimistic, useEffect } from 'react'
+import { useState } from 'react'
 import { Task, List } from '@/types'
 import { Calendar, Flag, Trash2, Edit2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -9,69 +9,61 @@ import EditTaskModal from '@/components/EditTaskModal'
 interface TaskCardProps {
   task: Task
   lists: List[]
+  onOptimisticToggle: (taskId: string) => void
+  onOptimisticDelete: (taskId: string) => void
+  onOptimisticUpdate: (taskId: string, updates: Partial<Task['metadata']>) => void
 }
 
-export default function TaskCard({ task, lists }: TaskCardProps) {
+export default function TaskCard({ 
+  task, 
+  lists, 
+  onOptimisticToggle,
+  onOptimisticDelete,
+  onOptimisticUpdate
+}: TaskCardProps) {
   const router = useRouter()
   const [isEditing, setIsEditing] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  
-  // Optimistic state for task completion - syncs with task prop changes
-  const [optimisticCompleted, setOptimisticCompleted] = useOptimistic(
-    task.metadata.completed,
-    (state, newCompleted: boolean) => newCompleted
-  )
-  
-  // Sync optimistic state when task prop changes (from server updates)
-  useEffect(() => {
-    setOptimisticCompleted(task.metadata.completed)
-  }, [task.metadata.completed, setOptimisticCompleted])
   
   const handleToggleComplete = async () => {
-    // Optimistically update UI immediately
-    setOptimisticCompleted(!optimisticCompleted)
+    // Optimistically update UI immediately - no waiting!
+    onOptimisticToggle(task.id)
     
     try {
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ completed: !optimisticCompleted })
+        body: JSON.stringify({ completed: !task.metadata.completed })
       })
       
       if (response.ok) {
-        // Wait a bit longer for the API to settle before refreshing
-        await new Promise(resolve => setTimeout(resolve, 150))
-        // Refresh to get latest data from server
+        // Background refresh to sync with server
         router.refresh()
-      } else {
-        // Revert on failure
-        setOptimisticCompleted(task.metadata.completed)
       }
+      // Note: We don't revert on failure for better UX - the server state will sync on next refresh
     } catch (error) {
       console.error('Error toggling task:', error)
-      // Revert on error
-      setOptimisticCompleted(task.metadata.completed)
+      // Background refresh to get correct state
+      router.refresh()
     }
   }
   
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this task?')) return
     
-    setIsDeleting(true)
+    // Optimistically remove from UI immediately
+    onOptimisticDelete(task.id)
+    
     try {
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'DELETE'
       })
       
       if (response.ok) {
-        // Wait a bit for the API to settle before refreshing
-        await new Promise(resolve => setTimeout(resolve, 150))
         router.refresh()
       }
     } catch (error) {
       console.error('Error deleting task:', error)
-    } finally {
-      setIsDeleting(false)
+      router.refresh()
     }
   }
   
@@ -97,21 +89,21 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
   return (
     <>
       <div className={`bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all ${
-        optimisticCompleted ? 'opacity-60' : ''
-      } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
+        task.metadata.completed ? 'opacity-60' : ''
+      }`}>
         <div className="flex items-start gap-3">
           {/* Checkbox */}
           <button
             onClick={handleToggleComplete}
             className="mt-1 flex-shrink-0"
-            aria-label={optimisticCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+            aria-label={task.metadata.completed ? 'Mark as incomplete' : 'Mark as complete'}
           >
             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-              optimisticCompleted
+              task.metadata.completed
                 ? 'bg-blue-600 border-blue-600'
                 : 'border-gray-300 hover:border-blue-600'
             }`}>
-              {optimisticCompleted && (
+              {task.metadata.completed && (
                 <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                   <path d="M5 13l4 4L19 7"></path>
                 </svg>
@@ -122,7 +114,7 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <h3 className={`font-medium text-gray-900 transition-all ${
-              optimisticCompleted ? 'line-through text-gray-500' : ''
+              task.metadata.completed ? 'line-through text-gray-500' : ''
             }`}>
               {task.metadata.title}
             </h3>
@@ -173,8 +165,7 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
             
             <button
               onClick={handleDelete}
-              disabled={isDeleting}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
               aria-label="Delete task"
             >
               <Trash2 className="w-4 h-4" />
@@ -188,6 +179,7 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
           task={task}
           lists={lists}
           onClose={() => setIsEditing(false)}
+          onOptimisticUpdate={onOptimisticUpdate}
         />
       )}
     </>

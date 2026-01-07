@@ -1,19 +1,20 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { List } from '@/types'
+import { useState } from 'react'
+import { List, Task } from '@/types'
 import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface AddTaskFormProps {
   lists: List[]
   listSlug?: string
+  onOptimisticAdd: (task: Task) => void
 }
 
-export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
+export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTaskFormProps) {
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
-  const [isPending, startTransition] = useTransition()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -26,15 +27,39 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.title.trim()) return
+    if (!formData.title.trim() || isSubmitting) return
     
-    const taskData = {
-      ...formData,
-      list: formData.list || defaultList?.id || ''
+    setIsSubmitting(true)
+    
+    const selectedList = formData.list 
+      ? lists.find(l => l.id === formData.list) 
+      : defaultList
+    
+    // Create optimistic task with temporary ID
+    const optimisticTask: Task = {
+      id: `temp-${Date.now()}`,
+      slug: `temp-${Date.now()}`,
+      title: formData.title,
+      type: 'tasks',
+      created_at: new Date().toISOString(),
+      modified_at: new Date().toISOString(),
+      metadata: {
+        title: formData.title,
+        description: formData.description || undefined,
+        completed: false,
+        priority: formData.priority ? {
+          key: formData.priority as 'low' | 'medium' | 'high',
+          value: formData.priority.charAt(0).toUpperCase() + formData.priority.slice(1)
+        } : undefined,
+        due_date: formData.due_date || undefined,
+        list: selectedList
+      }
     }
     
+    // Optimistically add the task immediately
+    onOptimisticAdd(optimisticTask)
+    
     // Reset form immediately for instant feedback
-    const currentFormData = { ...formData }
     setFormData({
       title: '',
       description: '',
@@ -43,45 +68,42 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
       list: ''
     })
     setIsExpanded(false)
+    setIsSubmitting(false)
     
-    // Use transition to make the update feel instant
-    startTransition(async () => {
-      try {
-        const response = await fetch('/api/tasks', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(taskData)
-        })
-        
-        if (response.ok) {
-          // Wait a bit for the API to settle before refreshing
-          await new Promise(resolve => setTimeout(resolve, 150))
-          router.refresh()
-        } else {
-          // Restore form data on failure
-          setFormData(currentFormData)
-          setIsExpanded(true)
-          alert('Failed to create task. Please try again.')
-        }
-      } catch (error) {
-        console.error('Error creating task:', error)
-        // Restore form data on error
-        setFormData(currentFormData)
-        setIsExpanded(true)
-        alert('Failed to create task. Please try again.')
+    // Send to server in background
+    try {
+      const taskData = {
+        title: optimisticTask.metadata.title,
+        description: optimisticTask.metadata.description || '',
+        priority: formData.priority,
+        due_date: formData.due_date,
+        list: formData.list || defaultList?.id || ''
       }
-    })
+      
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData)
+      })
+      
+      if (response.ok) {
+        // Background refresh to get real task data with proper ID
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Error creating task:', error)
+      router.refresh()
+    }
   }
   
   if (!isExpanded) {
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        disabled={isPending}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
       >
         <Plus className="w-5 h-5" />
-        <span className="font-medium">{isPending ? 'Adding...' : 'Add Task'}</span>
+        <span className="font-medium">Add Task</span>
       </button>
     )
   }
@@ -96,7 +118,6 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
         className="w-full text-lg font-medium border-none outline-none mb-2"
         autoFocus
         required
-        disabled={isPending}
       />
       
       <textarea
@@ -105,7 +126,6 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
         placeholder="Description (optional)"
         className="w-full text-sm text-gray-600 border-none outline-none resize-none mb-3"
         rows={2}
-        disabled={isPending}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -113,7 +133,6 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
           value={formData.priority}
           onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isPending}
         >
           <option value="low">Low Priority</option>
           <option value="medium">Medium Priority</option>
@@ -125,14 +144,12 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
           value={formData.due_date}
           onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isPending}
         />
         
         <select
           value={formData.list}
           onChange={(e) => setFormData({ ...formData, list: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={isPending}
         >
           <option value="">
             {defaultList ? defaultList.title : 'No List'}
@@ -146,10 +163,10 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={isPending || !formData.title.trim()}
+          disabled={!formData.title.trim()}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {isPending ? 'Adding...' : 'Add Task'}
+          Add Task
         </button>
         
         <button
@@ -164,8 +181,7 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
               list: ''
             })
           }}
-          disabled={isPending}
-          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
         >
           Cancel
         </button>
