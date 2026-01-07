@@ -14,6 +14,32 @@
   body.dark {
     @apply bg-black text-white;
   }
+
+  /* Prevent iOS zoom on form inputs by ensuring minimum 16px font size */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Prevent touch callout on iOS */
+  input,
+  select,
+  textarea,
+  button {
+    -webkit-touch-callout: none;
+  }
+
+  @media screen and (max-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -24,5 +50,11 @@
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  /* Utility class for inputs that should not trigger zoom */
+  .no-zoom {
+    font-size: 16px !important;
+    -webkit-text-size-adjust: 100%;
   }
 }
