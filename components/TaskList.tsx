@@ -18,12 +18,6 @@ interface PendingTaskState {
   // Add other fields here as needed for other optimistic updates
 }
 
-// Track tasks that are celebrating (just completed)
-interface CelebratingTask {
-  taskId: string
-  timestamp: number
-}
-
 export default function TaskList({ initialTasks, lists, listSlug }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false)
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
@@ -34,7 +28,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   // Track pending state changes for existing tasks (keyed by task ID)
   const pendingStateChangesRef = useRef<Map<string, PendingTaskState>>(new Map())
   // Changed: Track tasks that are currently celebrating (showing confetti + fade out)
-  const [celebratingTasks, setCelebratingTasks] = useState<Set<string>>(new Set())
+  // Now stores timestamp when animation started for more precise timing
+  const [celebratingTasks, setCelebratingTasks] = useState<Map<string, number>>(new Map())
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async () => {
@@ -138,22 +133,22 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
         const newCompletedState = !task.metadata.completed
         pendingStateChangesRef.current.set(taskId, { completed: newCompletedState })
         
-        // Changed: If task is becoming completed, add to celebrating set
+        // Changed: If task is becoming completed, add to celebrating map with timestamp
         if (newCompletedState) {
           setCelebratingTasks(prevCelebrating => {
-            const newSet = new Set(prevCelebrating)
-            newSet.add(taskId)
-            return newSet
+            const newMap = new Map(prevCelebrating)
+            newMap.set(taskId, Date.now())
+            return newMap
           })
           
-          // Changed: Remove from celebrating after animation completes (900ms - matches CSS timing)
+          // Changed: Remove from celebrating after animation fully completes (1000ms to match TaskCard)
           setTimeout(() => {
             setCelebratingTasks(prevCelebrating => {
-              const newSet = new Set(prevCelebrating)
-              newSet.delete(taskId)
-              return newSet
+              const newMap = new Map(prevCelebrating)
+              newMap.delete(taskId)
+              return newMap
             })
-          }, 900)
+          }, 1000)
         }
       }
       
@@ -173,9 +168,9 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     pendingStateChangesRef.current.delete(taskId)
     // Changed: Also remove from celebrating if deleting
     setCelebratingTasks(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(taskId)
-      return newSet
+      const newMap = new Map(prev)
+      newMap.delete(taskId)
+      return newMap
     })
     setTasks(prev => prev.filter(task => task.id !== taskId))
   }, [])
