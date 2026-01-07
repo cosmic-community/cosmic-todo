@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { List } from '@/types'
 import { Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -13,7 +13,7 @@ interface AddTaskFormProps {
 export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
   const router = useRouter()
   const [isExpanded, setIsExpanded] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -28,46 +28,58 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
     e.preventDefault()
     if (!formData.title.trim()) return
     
-    setIsSubmitting(true)
-    
-    try {
-      const taskData = {
-        ...formData,
-        list: formData.list || defaultList?.id || ''
-      }
-      
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(taskData)
-      })
-      
-      if (response.ok) {
-        setFormData({
-          title: '',
-          description: '',
-          priority: 'medium',
-          due_date: '',
-          list: ''
-        })
-        setIsExpanded(false)
-        router.refresh()
-      }
-    } catch (error) {
-      console.error('Error creating task:', error)
-    } finally {
-      setIsSubmitting(false)
+    const taskData = {
+      ...formData,
+      list: formData.list || defaultList?.id || ''
     }
+    
+    // Reset form immediately for instant feedback
+    const currentFormData = { ...formData }
+    setFormData({
+      title: '',
+      description: '',
+      priority: 'medium',
+      due_date: '',
+      list: ''
+    })
+    setIsExpanded(false)
+    
+    // Use transition to make the update feel instant
+    startTransition(async () => {
+      try {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(taskData)
+        })
+        
+        if (response.ok) {
+          router.refresh()
+        } else {
+          // Restore form data on failure
+          setFormData(currentFormData)
+          setIsExpanded(true)
+          alert('Failed to create task. Please try again.')
+        }
+      } catch (error) {
+        console.error('Error creating task:', error)
+        // Restore form data on error
+        setFormData(currentFormData)
+        setIsExpanded(true)
+        alert('Failed to create task. Please try again.')
+      }
+    })
   }
   
   if (!isExpanded) {
     return (
       <button
         onClick={() => setIsExpanded(true)}
-        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+        disabled={isPending}
+        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50"
       >
         <Plus className="w-5 h-5" />
-        <span className="font-medium">Add Task</span>
+        <span className="font-medium">{isPending ? 'Adding...' : 'Add Task'}</span>
       </button>
     )
   }
@@ -82,6 +94,7 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
         className="w-full text-lg font-medium border-none outline-none mb-2"
         autoFocus
         required
+        disabled={isPending}
       />
       
       <textarea
@@ -90,6 +103,7 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
         placeholder="Description (optional)"
         className="w-full text-sm text-gray-600 border-none outline-none resize-none mb-3"
         rows={2}
+        disabled={isPending}
       />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -97,6 +111,7 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
           value={formData.priority}
           onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isPending}
         >
           <option value="low">Low Priority</option>
           <option value="medium">Medium Priority</option>
@@ -108,12 +123,14 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
           value={formData.due_date}
           onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isPending}
         />
         
         <select
           value={formData.list}
           onChange={(e) => setFormData({ ...formData, list: e.target.value })}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isPending}
         >
           <option value="">
             {defaultList ? defaultList.title : 'No List'}
@@ -127,10 +144,10 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={isSubmitting || !formData.title.trim()}
+          disabled={isPending || !formData.title.trim()}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
-          {isSubmitting ? 'Adding...' : 'Add Task'}
+          {isPending ? 'Adding...' : 'Add Task'}
         </button>
         
         <button
@@ -145,7 +162,8 @@ export default function AddTaskForm({ lists, listSlug }: AddTaskFormProps) {
               list: ''
             })
           }}
-          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+          disabled={isPending}
+          className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
         >
           Cancel
         </button>

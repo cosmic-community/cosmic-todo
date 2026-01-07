@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useOptimistic } from 'react'
 import { Task, List } from '@/types'
 import { Calendar, Flag, Trash2, Edit2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -16,7 +16,16 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   
+  // Optimistic state for task completion
+  const [optimisticCompleted, setOptimisticCompleted] = useOptimistic(
+    task.metadata.completed,
+    (state, newCompleted: boolean) => newCompleted
+  )
+  
   const handleToggleComplete = async () => {
+    // Optimistically update UI
+    setOptimisticCompleted(!optimisticCompleted)
+    
     try {
       const response = await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
@@ -26,9 +35,14 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
       
       if (response.ok) {
         router.refresh()
+      } else {
+        // Revert on failure
+        setOptimisticCompleted(task.metadata.completed)
       }
     } catch (error) {
       console.error('Error toggling task:', error)
+      // Revert on error
+      setOptimisticCompleted(task.metadata.completed)
     }
   }
   
@@ -72,22 +86,22 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
   
   return (
     <>
-      <div className={`bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow ${
-        task.metadata.completed ? 'opacity-60' : ''
-      }`}>
+      <div className={`bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-all ${
+        optimisticCompleted ? 'opacity-60' : ''
+      } ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className="flex items-start gap-3">
           {/* Checkbox */}
           <button
             onClick={handleToggleComplete}
             className="mt-1 flex-shrink-0"
-            aria-label={task.metadata.completed ? 'Mark as incomplete' : 'Mark as complete'}
+            aria-label={optimisticCompleted ? 'Mark as incomplete' : 'Mark as complete'}
           >
-            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-              task.metadata.completed
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+              optimisticCompleted
                 ? 'bg-blue-600 border-blue-600'
                 : 'border-gray-300 hover:border-blue-600'
             }`}>
-              {task.metadata.completed && (
+              {optimisticCompleted && (
                 <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                   <path d="M5 13l4 4L19 7"></path>
                 </svg>
@@ -97,8 +111,8 @@ export default function TaskCard({ task, lists }: TaskCardProps) {
           
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <h3 className={`font-medium text-gray-900 ${
-              task.metadata.completed ? 'line-through text-gray-500' : ''
+            <h3 className={`font-medium text-gray-900 transition-all ${
+              optimisticCompleted ? 'line-through text-gray-500' : ''
             }`}>
               {task.metadata.title}
             </h3>
