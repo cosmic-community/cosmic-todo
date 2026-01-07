@@ -17,6 +17,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [isLoading, setIsLoading] = useState(false)
   const mountedRef = useRef(true)
+  // Track temporary task IDs to preserve optimistic updates
+  const pendingTasksRef = useRef<Set<string>>(new Set())
 
   // Fetch tasks from API
   const fetchTasks = useCallback(async () => {
@@ -33,7 +35,32 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
             task => task.metadata.list?.slug === listSlug
           )
         }
-        setTasks(filteredTasks)
+        
+        // Merge server tasks with pending optimistic tasks
+        // Keep optimistic tasks that aren't yet on the server
+        setTasks(prevTasks => {
+          const pendingTasks = prevTasks.filter(task => 
+            pendingTasksRef.current.has(task.id)
+          )
+          
+          // Check if any pending tasks now exist on server (by matching title)
+          const serverTaskTitles = new Set(filteredTasks.map(t => t.metadata.title))
+          
+          // Remove pending tasks that are now on server
+          pendingTasks.forEach(pendingTask => {
+            if (serverTaskTitles.has(pendingTask.metadata.title)) {
+              pendingTasksRef.current.delete(pendingTask.id)
+            }
+          })
+          
+          // Keep only pending tasks not yet on server
+          const stillPendingTasks = pendingTasks.filter(task => 
+            pendingTasksRef.current.has(task.id)
+          )
+          
+          // Combine: pending optimistic tasks first, then server tasks
+          return [...stillPendingTasks, ...filteredTasks]
+        })
       }
     } catch (error) {
       console.error('Error fetching tasks:', error)
@@ -55,10 +82,12 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
 
   // Handlers for optimistic updates
   const handleOptimisticAdd = useCallback((task: Task) => {
+    // Track this as a pending/optimistic task
+    pendingTasksRef.current.add(task.id)
     setTasks(prev => [task, ...prev])
-    // Fetch fresh data after a short delay to get the real task
-    setTimeout(fetchTasks, 500)
-  }, [fetchTasks])
+    // Don't immediately fetch - let the polling handle it
+    // This prevents the flicker where the task disappears then reappears
+  }, [])
 
   const handleOptimisticToggle = useCallback((taskId: string) => {
     setTasks(prev => prev.map(task => 
@@ -69,6 +98,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   }, [])
 
   const handleOptimisticDelete = useCallback((taskId: string) => {
+    // Also remove from pending if it was there
+    pendingTasksRef.current.delete(taskId)
     setTasks(prev => prev.filter(task => task.id !== taskId))
   }, [])
 
