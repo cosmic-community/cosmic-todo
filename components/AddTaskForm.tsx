@@ -14,8 +14,8 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
   const [isExpanded, setIsExpanded] = useState(false)
   const [title, setTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Changed: Track when we need to refocus after submission
-  const [shouldRefocus, setShouldRefocus] = useState(false)
+  // Changed: Track when form should stay open (during and after submission for quick task adding)
+  const keepOpenRef = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   
   const defaultList = lists.find(list => list.slug === listSlug)
@@ -26,23 +26,12 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     }
   }, [isExpanded])
   
-  // Changed: Effect to handle refocusing after task submission
-  useEffect(() => {
-    if (shouldRefocus && inputRef.current) {
-      // Use requestAnimationFrame to ensure DOM is ready
-      requestAnimationFrame(() => {
-        if (inputRef.current) {
-          inputRef.current.focus()
-        }
-      })
-      setShouldRefocus(false)
-    }
-  }, [shouldRefocus])
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || isSubmitting) return
     
+    // Changed: Mark that we want to keep the form open
+    keepOpenRef.current = true
     setIsSubmitting(true)
     
     // Create optimistic task with temporary ID
@@ -66,8 +55,18 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     // Reset form immediately but keep expanded
     const taskTitle = title
     setTitle('')
-    // Changed: Trigger refocus via state change to ensure it happens after re-render
-    setShouldRefocus(true)
+    
+    // Changed: Use multiple requestAnimationFrame calls to ensure DOM is fully ready
+    // This ensures focus happens after React re-render and browser paint
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus()
+        }
+        // Changed: Reset keepOpen flag after focus is set
+        keepOpenRef.current = false
+      })
+    })
     
     // Send to server in background
     try {
@@ -88,8 +87,21 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
+      keepOpenRef.current = false
       setIsExpanded(false)
       setTitle('')
+    }
+  }
+  
+  // Changed: Handle blur - only collapse if we're not in the middle of submission
+  const handleBlur = () => {
+    // Don't collapse if we're submitting or explicitly keeping open for quick task adding
+    if (keepOpenRef.current || isSubmitting) {
+      return
+    }
+    // Only collapse if empty
+    if (!title.trim()) {
+      setIsExpanded(false)
     }
   }
   
@@ -115,11 +127,7 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={handleKeyDown}
-          onBlur={() => {
-            if (!title.trim()) {
-              setIsExpanded(false)
-            }
-          }}
+          onBlur={handleBlur}
           placeholder="Add a Task"
           className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none text-base"
           disabled={isSubmitting}
