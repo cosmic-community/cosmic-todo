@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Task, List } from '@/types'
 import { Trash2 } from 'lucide-react'
 
@@ -13,6 +13,20 @@ interface TaskCardProps {
   onSyncComplete?: (taskId: string) => void
 }
 
+// Simple confetti particle component
+function ConfettiParticle({ delay, color }: { delay: number; color: string }) {
+  return (
+    <div
+      className="absolute w-2 h-2 rounded-full animate-confetti pointer-events-none"
+      style={{
+        backgroundColor: color,
+        left: `${Math.random() * 100}%`,
+        animationDelay: `${delay}ms`,
+      }}
+    />
+  )
+}
+
 export default function TaskCard({ 
   task, 
   onOptimisticToggle,
@@ -21,7 +35,27 @@ export default function TaskCard({
 }: TaskCardProps) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [isFadingOut, setIsFadingOut] = useState(false)
+  
+  // Track when task becomes completed to trigger celebration
+  const [wasCompleted, setWasCompleted] = useState(task.metadata.completed)
+  
+  useEffect(() => {
+    // If task just became completed (wasn't before, is now)
+    if (!wasCompleted && task.metadata.completed) {
+      setShowCelebration(true)
+      // Start fade out after celebration
+      setTimeout(() => {
+        setIsFadingOut(true)
+      }, 600)
+      // Hide celebration after animation
+      setTimeout(() => {
+        setShowCelebration(false)
+      }, 800)
+    }
+    setWasCompleted(task.metadata.completed)
+  }, [task.metadata.completed, wasCompleted])
   
   const handleToggleComplete = async () => {
     if (isUpdating) return
@@ -51,6 +85,7 @@ export default function TaskCard({
     }
   }
   
+  // Changed: Direct delete without confirmation
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
     if (isDeleting) return
@@ -71,12 +106,26 @@ export default function TaskCard({
       // A page refresh will restore it if the delete failed
     } finally {
       setIsDeleting(false)
-      setShowDeleteConfirm(false)
     }
   }
   
+  // Confetti colors
+  const confettiColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+  
   return (
-    <div className="relative">
+    <div className={`relative transition-all duration-500 ${isFadingOut && task.metadata.completed ? 'opacity-0 scale-95 -translate-y-2' : 'opacity-100 scale-100'}`}>
+      {/* Confetti celebration overlay */}
+      {showCelebration && (
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-10">
+          {confettiColors.map((color, i) => (
+            <ConfettiParticle key={i} delay={i * 50} color={color} />
+          ))}
+          {confettiColors.map((color, i) => (
+            <ConfettiParticle key={i + 6} delay={i * 50 + 100} color={color} />
+          ))}
+        </div>
+      )}
+      
       <div 
         className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-800"
         onClick={handleToggleComplete}
@@ -95,9 +144,9 @@ export default function TaskCard({
             task.metadata.completed
               ? 'bg-blue-600 border-blue-600'
               : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
-          }`}>
+          } ${showCelebration ? 'scale-125' : ''}`}>
             {task.metadata.completed && (
-              <svg className="w-3 h-3 text-white" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className={`w-3 h-3 text-white transition-transform ${showCelebration ? 'scale-110' : ''}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                 <path d="M5 13l4 4L19 7"></path>
               </svg>
             )}
@@ -114,10 +163,7 @@ export default function TaskCard({
         {/* Delete button - only show for completed tasks */}
         {task.metadata.completed && (
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowDeleteConfirm(true)
-            }}
+            onClick={handleDelete}
             className="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
             aria-label="Delete task"
             disabled={isDeleting}
@@ -126,33 +172,6 @@ export default function TaskCard({
           </button>
         )}
       </div>
-      
-      {/* Delete Confirmation Popover */}
-      {showDeleteConfirm && (
-        <div className="absolute right-0 top-full mt-1 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[200px]">
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-            Delete this task?
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="flex-1 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setShowDeleteConfirm(false)
-              }}
-              className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
