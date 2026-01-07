@@ -163,7 +163,8 @@ export default function TaskCard({
             : 'grid-rows-[1fr] opacity-100'
         }`}
       >
-        <div className="overflow-hidden">
+        {/* Changed: Removed overflow-hidden to allow confetti to display fully */}
+        <div>
           <div className="relative">
             <div 
               className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800 ${
