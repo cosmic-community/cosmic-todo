@@ -1,87 +1,107 @@
 'use client'
 
-import { useOptimistic, useCallback, useState } from 'react'
+import { useCallback, useState, useEffect, useRef } from 'react'
 import { Task, List } from '@/types'
 import TaskCard from '@/components/TaskCard'
 import AddTaskForm from '@/components/AddTaskForm'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Loader2 } from 'lucide-react'
 
 interface TaskListProps {
-  tasks: Task[]
+  initialTasks: Task[]
   lists: List[]
   listSlug?: string
 }
 
-// Types for optimistic actions
-type OptimisticAction = 
-  | { type: 'add'; task: Task }
-  | { type: 'toggle'; taskId: string }
-  | { type: 'delete'; taskId: string }
-  | { type: 'update'; taskId: string; updates: Partial<Task['metadata']> }
-  | { type: 'star'; taskId: string }
-
-export default function TaskList({ tasks, lists, listSlug }: TaskListProps) {
+export default function TaskList({ initialTasks, lists, listSlug }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false)
-  
-  // Optimistic state management for the entire task list
-  const [optimisticTasks, addOptimisticAction] = useOptimistic(
-    tasks,
-    (currentTasks: Task[], action: OptimisticAction) => {
-      switch (action.type) {
-        case 'add':
-          return [action.task, ...currentTasks]
-        case 'toggle':
-          return currentTasks.map(task => 
-            task.id === action.taskId 
-              ? { ...task, metadata: { ...task.metadata, completed: !task.metadata.completed } }
-              : task
-          )
-        case 'delete':
-          return currentTasks.filter(task => task.id !== action.taskId)
-        case 'update':
-          return currentTasks.map(task =>
-            task.id === action.taskId
-              ? { ...task, metadata: { ...task.metadata, ...action.updates } }
-              : task
-          )
-        case 'star':
-          return currentTasks.map(task =>
-            task.id === action.taskId
-              ? { ...task, metadata: { ...task.metadata, starred: !task.metadata.starred } }
-              : task
-          )
-        default:
-          return currentTasks
-      }
-    }
-  )
+  const [tasks, setTasks] = useState<Task[]>(initialTasks)
+  const [isLoading, setIsLoading] = useState(false)
+  const mountedRef = useRef(true)
 
-  // Handlers to pass down to child components
+  // Fetch tasks from API
+  const fetchTasks = useCallback(async () => {
+    try {
+      const response = await fetch('/api/tasks')
+      if (!response.ok) throw new Error('Failed to fetch')
+      const data = await response.json()
+      
+      if (mountedRef.current) {
+        // Filter by list if listSlug is provided
+        let filteredTasks = data.tasks as Task[]
+        if (listSlug) {
+          filteredTasks = filteredTasks.filter(
+            task => task.metadata.list?.slug === listSlug
+          )
+        }
+        setTasks(filteredTasks)
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error)
+    }
+  }, [listSlug])
+
+  // Initial load and polling for real-time updates
+  useEffect(() => {
+    mountedRef.current = true
+    
+    // Poll for updates every 3 seconds
+    const interval = setInterval(fetchTasks, 3000)
+    
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+    }
+  }, [fetchTasks])
+
+  // Handlers for optimistic updates
   const handleOptimisticAdd = useCallback((task: Task) => {
-    addOptimisticAction({ type: 'add', task })
-  }, [addOptimisticAction])
+    setTasks(prev => [task, ...prev])
+    // Fetch fresh data after a short delay to get the real task
+    setTimeout(fetchTasks, 500)
+  }, [fetchTasks])
 
   const handleOptimisticToggle = useCallback((taskId: string) => {
-    addOptimisticAction({ type: 'toggle', taskId })
-  }, [addOptimisticAction])
+    setTasks(prev => prev.map(task => 
+      task.id === taskId 
+        ? { ...task, metadata: { ...task.metadata, completed: !task.metadata.completed } }
+        : task
+    ))
+  }, [])
 
   const handleOptimisticDelete = useCallback((taskId: string) => {
-    addOptimisticAction({ type: 'delete', taskId })
-  }, [addOptimisticAction])
+    setTasks(prev => prev.filter(task => task.id !== taskId))
+  }, [])
 
   const handleOptimisticUpdate = useCallback((taskId: string, updates: Partial<Task['metadata']>) => {
-    addOptimisticAction({ type: 'update', taskId, updates })
-  }, [addOptimisticAction])
+    setTasks(prev => prev.map(task =>
+      task.id === taskId
+        ? { ...task, metadata: { ...task.metadata, ...updates } }
+        : task
+    ))
+    // Fetch fresh data after update
+    setTimeout(fetchTasks, 500)
+  }, [fetchTasks])
 
   const handleOptimisticStar = useCallback((taskId: string) => {
-    addOptimisticAction({ type: 'star', taskId })
-  }, [addOptimisticAction])
+    setTasks(prev => prev.map(task =>
+      task.id === taskId
+        ? { ...task, metadata: { ...task.metadata, starred: !task.metadata.starred } }
+        : task
+    ))
+  }, [])
 
-  const pendingTasks = optimisticTasks.filter(task => !task.metadata.completed)
-  const completedTasks = optimisticTasks.filter(task => task.metadata.completed)
+  const pendingTasks = tasks.filter(task => !task.metadata.completed)
+  const completedTasks = tasks.filter(task => task.metadata.completed)
   
   return (
     <div className="space-y-2">
+      {/* Loading indicator */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-2">
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+        </div>
+      )}
+      
       {/* Pending Tasks */}
       {pendingTasks.map((task) => (
         <TaskCard 
@@ -103,7 +123,7 @@ export default function TaskList({ tasks, lists, listSlug }: TaskListProps) {
             className="flex items-center gap-2 text-gray-400 hover:text-gray-300 transition-colors py-2"
           >
             <ChevronRight className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-90' : ''}`} />
-            <span className="text-sm font-medium">Completed</span>
+            <span className="text-sm font-medium">Completed ({completedTasks.length})</span>
           </button>
           
           {showCompleted && (

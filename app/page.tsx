@@ -1,23 +1,15 @@
-import { getTasks, getLists } from '@/lib/cosmic'
-import Sidebar from '@/components/Sidebar'
-import TaskList from '@/components/TaskList'
-import MobileHeader from '@/components/MobileHeader'
+import ClientTaskList from '@/components/ClientTaskList'
+import ClientSidebar from '@/components/ClientSidebar'
+import ClientMobileHeader from '@/components/ClientMobileHeader'
 
-export const revalidate = 0
-
-export default async function Home() {
-  const [tasks, lists] = await Promise.all([
-    getTasks(),
-    getLists()
-  ])
-  
+export default function Home() {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Mobile Header */}
-      <MobileHeader lists={lists} />
+      <ClientMobileHeader />
       
       {/* Desktop Sidebar */}
-      <Sidebar lists={lists} />
+      <ClientSidebar />
       
       {/* Main Content */}
       <main className="flex-1 overflow-auto pt-16 md:pt-0">
@@ -25,11 +17,11 @@ export default async function Home() {
           <div className="mb-6">
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">All Tasks</h1>
             <p className="text-gray-600 mt-1">
-              {tasks.filter(t => !t.metadata.completed).length} tasks pending
+              Manage your tasks
             </p>
           </div>
           
-          <TaskList tasks={tasks} lists={lists} />
+          <ClientTaskList />
         </div>
       </main>
     </div>

@@ -13,6 +13,7 @@ interface AddTaskFormProps {
 export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTaskFormProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [title, setTitle] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   
   const defaultList = lists.find(list => list.slug === listSlug)
@@ -23,9 +24,11 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     }
   }, [isExpanded])
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim()) return
+    if (!title.trim() || isSubmitting) return
+    
+    setIsSubmitting(true)
     
     // Create optimistic task with temporary ID
     const optimisticTask: Task = {
@@ -47,18 +50,25 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     onOptimisticAdd(optimisticTask)
     
     // Reset form immediately
+    const taskTitle = title
     setTitle('')
     setIsExpanded(false)
     
     // Send to server in background
-    fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: optimisticTask.metadata.title,
-        list: defaultList?.id || ''
+    try {
+      await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: taskTitle,
+          list: defaultList?.id || ''
+        })
       })
-    }).catch(console.error)
+    } catch (error) {
+      console.error('Error creating task:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -97,6 +107,7 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
           }}
           placeholder="Add a Task"
           className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none text-base"
+          disabled={isSubmitting}
         />
       </div>
     </form>

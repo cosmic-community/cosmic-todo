@@ -1,7 +1,6 @@
 // app/api/tasks/[id]/route.ts
 import { NextResponse } from 'next/server'
 import { cosmic } from '@/lib/cosmic'
-import { revalidatePath } from 'next/cache'
 
 export async function PATCH(
   request: Request,
@@ -48,10 +47,6 @@ export async function PATCH(
       metadata: updateData
     })
     
-    // Revalidate in background
-    revalidatePath('/')
-    revalidatePath('/lists/[slug]')
-    
     return NextResponse.json({ success: true, task: response.object })
   } catch (error) {
     console.error('Error updating task:', error)
@@ -70,10 +65,6 @@ export async function DELETE(
     const { id } = await params
     
     await cosmic.objects.deleteOne(id)
-    
-    // Revalidate in background
-    revalidatePath('/')
-    revalidatePath('/lists/[slug]')
     
     return NextResponse.json({ success: true })
   } catch (error) {

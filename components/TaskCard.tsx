@@ -19,30 +19,50 @@ export default function TaskCard({
   onOptimisticStar
 }: TaskCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   
-  const handleToggleComplete = () => {
+  const handleToggleComplete = async () => {
+    if (isUpdating) return
+    setIsUpdating(true)
+    
     // Optimistic update - instant feedback
     onOptimisticToggle(task.id)
     
     // Background sync with server
-    fetch(`/api/tasks/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ completed: !task.metadata.completed })
-    }).catch(console.error)
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: !task.metadata.completed })
+      })
+    } catch (error) {
+      console.error('Error toggling task:', error)
+      // Revert on error
+      onOptimisticToggle(task.id)
+    } finally {
+      setIsUpdating(false)
+    }
   }
   
-  const handleToggleStar = (e: React.MouseEvent) => {
+  const handleToggleStar = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    if (isUpdating) return
+    
     // Optimistic update - instant feedback
     onOptimisticStar(task.id)
     
     // Background sync with server
-    fetch(`/api/tasks/${task.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ starred: !task.metadata.starred })
-    }).catch(console.error)
+    try {
+      await fetch(`/api/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ starred: !task.metadata.starred })
+      })
+    } catch (error) {
+      console.error('Error starring task:', error)
+      // Revert on error
+      onOptimisticStar(task.id)
+    }
   }
   
   return (
@@ -60,6 +80,7 @@ export default function TaskCard({
         }}
         className="flex-shrink-0"
         aria-label={task.metadata.completed ? 'Mark as incomplete' : 'Mark as complete'}
+        disabled={isUpdating}
       >
         <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
           task.metadata.completed

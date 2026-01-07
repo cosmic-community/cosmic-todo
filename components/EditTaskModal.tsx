@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Task, List, TaskPriority } from '@/types'
 import { X } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 
 interface EditTaskModalProps {
   task: Task
@@ -13,7 +12,6 @@ interface EditTaskModalProps {
 }
 
 export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate }: EditTaskModalProps) {
-  const router = useRouter()
   const [formData, setFormData] = useState({
     title: task.metadata.title,
     description: task.metadata.description || '',
@@ -21,10 +19,13 @@ export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate
     due_date: task.metadata.due_date || '',
     list: task.metadata.list?.id || ''
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.title.trim()) return
+    if (!formData.title.trim() || isSubmitting) return
+    
+    setIsSubmitting(true)
     
     const selectedList = formData.list 
       ? lists.find(l => l.id === formData.list) 
@@ -48,18 +49,15 @@ export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate
     
     // Send to server in background
     try {
-      const response = await fetch(`/api/tasks/${task.id}`, {
+      await fetch(`/api/tasks/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       })
-      
-      if (response.ok) {
-        router.refresh()
-      }
     } catch (error) {
       console.error('Error updating task:', error)
-      router.refresh()
+    } finally {
+      setIsSubmitting(false)
     }
   }
   
@@ -149,10 +147,10 @@ export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate
           <div className="flex items-center gap-2 pt-2">
             <button
               type="submit"
-              disabled={!formData.title.trim()}
+              disabled={!formData.title.trim() || isSubmitting}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Save Changes
+              {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
             
             <button

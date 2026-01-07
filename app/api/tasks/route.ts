@@ -1,6 +1,26 @@
 import { NextResponse } from 'next/server'
 import { cosmic } from '@/lib/cosmic'
-import { revalidatePath } from 'next/cache'
+
+export async function GET() {
+  try {
+    const response = await cosmic.objects
+      .find({ type: 'tasks' })
+      .props(['id', 'title', 'slug', 'metadata', 'created_at', 'modified_at'])
+      .depth(1)
+    
+    return NextResponse.json({ tasks: response.objects })
+  } catch (error) {
+    // Handle 404 (no objects found) as empty array
+    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+      return NextResponse.json({ tasks: [] })
+    }
+    console.error('Error fetching tasks:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch tasks' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,10 +39,6 @@ export async function POST(request: Request) {
         list: data.list || ''
       }
     })
-    
-    // Revalidate in background
-    revalidatePath('/')
-    revalidatePath('/lists/[slug]')
     
     return NextResponse.json({ success: true, task: response.object })
   } catch (error) {
