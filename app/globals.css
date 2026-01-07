@@ -66,22 +66,26 @@
   }
 }
 
-/* Changed: Circular confetti animation that radiates outward in all directions */
+/* Changed: Radial confetti animation that explodes outward from the center circle */
 @keyframes confetti {
   0% {
-    transform: translate(-50%, -50%) rotate(0deg) translateX(0) scale(1);
+    transform: translate(-50%, -50%) scale(1);
     opacity: 1;
   }
   20% {
     opacity: 1;
   }
   100% {
-    transform: translate(-50%, -50%) rotate(calc(var(--confetti-angle) + 180deg)) translateX(80px) scale(0.3);
+    transform: translate(-50%, -50%) 
+               translateX(calc(cos(var(--confetti-angle)) * 80px))
+               translateY(calc(sin(var(--confetti-angle)) * 80px))
+               rotate(720deg)
+               scale(0.3);
     opacity: 0;
   }
 }
 
-/* Changed: Apply circular confetti animation */
+/* Changed: Apply radial confetti animation with better easing */
 .animate-confetti {
   animation: confetti 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

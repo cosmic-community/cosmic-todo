@@ -14,10 +14,10 @@ interface TaskCardProps {
   onSyncComplete?: (taskId: string) => void
 }
 
-// Changed: Improved confetti particle that radiates in a circle pattern
+// Changed: Improved confetti particle that radiates outward from center in all directions
 function ConfettiParticle({ delay, color, index, total }: { delay: number; color: string; index: number; total: number }) {
-  // Calculate angle for circular distribution
-  const angle = (index / total) * 360
+  // Calculate angle in radians for true circular distribution
+  const angle = (index / total) * Math.PI * 2
   
   return (
     <div
@@ -27,7 +27,7 @@ function ConfettiParticle({ delay, color, index, total }: { delay: number; color
         left: '50%',
         top: '50%',
         animationDelay: `${delay}ms`,
-        '--confetti-angle': `${angle}deg`,
+        '--confetti-angle': `${angle}rad`,
       } as React.CSSProperties}
     />
   )
@@ -176,9 +176,9 @@ export default function TaskCard({
               }}
               onClick={handleCardClick}
             >
-              {/* Changed: Checkbox with confetti positioned around it - no overflow hidden */}
+              {/* Changed: Checkbox with confetti positioned around it - explodes outward */}
               <div className="relative flex-shrink-0 flex items-center">
-                {/* Changed: Confetti celebration that can extend outside task area */}
+                {/* Changed: Confetti celebration that radiates outward from center */}
                 {showCelebration && (
                   <div className="absolute inset-0 pointer-events-none z-20" style={{ overflow: 'visible' }}>
                     {confettiColors.map((color, i) => (
