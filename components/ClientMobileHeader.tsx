@@ -44,12 +44,9 @@ export default function ClientMobileHeader({ currentListSlug, onListChange }: Cl
     }
   }, [currentListSlug])
 
+  // Changed: Fetch only on mount and when currentListSlug changes, no polling
   useEffect(() => {
     fetchLists()
-    
-    // Poll for list updates
-    const interval = setInterval(fetchLists, 5000)
-    return () => clearInterval(interval)
   }, [fetchLists])
 
   const handleListCreated = (newList: List) => {

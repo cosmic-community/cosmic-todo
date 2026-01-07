@@ -4,7 +4,7 @@ import { useCallback, useState, useEffect, useRef } from 'react'
 import { Task, List } from '@/types'
 import TaskCard from '@/components/TaskCard'
 import AddTaskForm from '@/components/AddTaskForm'
-import { ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 interface TaskListProps {
   initialTasks: Task[]
@@ -21,7 +21,6 @@ interface PendingTaskState {
 export default function TaskList({ initialTasks, lists, listSlug }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false)
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
-  const [isLoading, setIsLoading] = useState(false)
   const mountedRef = useRef(true)
   // Track temporary task IDs for newly added tasks
   const pendingNewTasksRef = useRef<Set<string>>(new Set())
@@ -33,107 +32,25 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   // Now stores timestamp when animation started for more precise timing
   const [celebratingTasks, setCelebratingTasks] = useState<Map<string, number>>(new Map())
 
-  // Fetch tasks from API
-  const fetchTasks = useCallback(async () => {
-    // Changed: Skip fetch if there are pending deletes to avoid race conditions
-    if (deletedTaskIdsRef.current.size > 0) {
-      return
-    }
-    
-    try {
-      const response = await fetch('/api/tasks')
-      if (!response.ok) throw new Error('Failed to fetch')
-      const data = await response.json()
-      
-      if (mountedRef.current) {
-        // Filter by list if listSlug is provided
-        let filteredTasks = data.tasks as Task[]
-        if (listSlug) {
-          filteredTasks = filteredTasks.filter(
-            task => task.metadata.list?.slug === listSlug
-          )
-        }
-        
-        // Changed: Filter out any tasks that were recently deleted (to handle race conditions)
-        filteredTasks = filteredTasks.filter(
-          task => !deletedTaskIdsRef.current.has(task.id)
-        )
-        
-        // Merge server tasks with pending optimistic state
-        setTasks(prevTasks => {
-          // Handle pending new tasks (tasks not yet on server)
-          const pendingNewTasks = prevTasks.filter(task => 
-            pendingNewTasksRef.current.has(task.id)
-          )
-          
-          // Check if any pending new tasks now exist on server (by matching title)
-          const serverTaskTitles = new Set(filteredTasks.map(t => t.metadata.title))
-          
-          // Remove pending new tasks that are now on server
-          pendingNewTasks.forEach(pendingTask => {
-            if (serverTaskTitles.has(pendingTask.metadata.title)) {
-              pendingNewTasksRef.current.delete(pendingTask.id)
-            }
-          })
-          
-          // Keep only pending new tasks not yet on server
-          const stillPendingNewTasks = pendingNewTasks.filter(task => 
-            pendingNewTasksRef.current.has(task.id)
-          )
-          
-          // Apply pending state changes to server tasks
-          const tasksWithPendingState = filteredTasks.map(serverTask => {
-            const pendingState = pendingStateChangesRef.current.get(serverTask.id)
-            if (pendingState) {
-              // Check if server state now matches our optimistic state
-              // If so, clear the pending state
-              if (pendingState.completed !== undefined && 
-                  serverTask.metadata.completed === pendingState.completed) {
-                pendingStateChangesRef.current.delete(serverTask.id)
-                return serverTask
-              }
-              
-              // Server doesn't match yet, keep our optimistic state
-              return {
-                ...serverTask,
-                metadata: {
-                  ...serverTask.metadata,
-                  ...(pendingState.completed !== undefined && { completed: pendingState.completed })
-                }
-              }
-            }
-            return serverTask
-          })
-          
-          // Combine: pending new tasks first, then server tasks with applied pending state
-          return [...stillPendingNewTasks, ...tasksWithPendingState]
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching tasks:', error)
-    }
-  }, [listSlug])
+  // Changed: Update tasks when initialTasks prop changes (list navigation)
+  useEffect(() => {
+    setTasks(initialTasks)
+  }, [initialTasks])
 
-  // Initial load and polling for real-time updates
+  // Changed: Cleanup on unmount
   useEffect(() => {
     mountedRef.current = true
     
-    // Poll for updates every 3 seconds
-    const interval = setInterval(fetchTasks, 3000)
-    
     return () => {
       mountedRef.current = false
-      clearInterval(interval)
     }
-  }, [fetchTasks])
+  }, [])
 
   // Handlers for optimistic updates
   const handleOptimisticAdd = useCallback((task: Task) => {
     // Track this as a pending/optimistic new task
     pendingNewTasksRef.current.add(task.id)
     setTasks(prev => [task, ...prev])
-    // Don't immediately fetch - let the polling handle it
-    // This prevents the flicker where the task disappears then reappears
   }, [])
 
   // Changed: Updated toggle handler to track celebrating tasks with smoother timing
@@ -170,8 +87,6 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
           : task
       )
     })
-    // Don't immediately fetch - let the polling handle it
-    // This prevents the flicker where the task reverts then updates
   }, [])
 
   const handleOptimisticDelete = useCallback((taskId: string) => {
@@ -208,7 +123,6 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
         ? { ...task, metadata: { ...task.metadata, ...updates } }
         : task
     ))
-    // Don't immediately fetch - let the polling handle it
   }, [])
 
   // Function to clear pending state for a task (called after successful server sync)
@@ -225,13 +139,6 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     <>
       {/* Changed: Task list with bottom padding for fixed add form */}
       <div className="space-y-2 pb-24">
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-2">
-            <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-          </div>
-        )}
-        
         {/* Pending Tasks */}
         {pendingTasks.map((task) => (
           <TaskCard 

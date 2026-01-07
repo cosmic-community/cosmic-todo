@@ -49,12 +49,9 @@ export default function ClientSidebar({ currentListSlug, onListChange }: ClientS
     }
   }, [])
 
+  // Changed: Fetch only on mount, no polling
   useEffect(() => {
     fetchLists()
-    
-    // Poll for list updates
-    const interval = setInterval(fetchLists, 5000)
-    return () => clearInterval(interval)
   }, [fetchLists])
 
   const handleListCreated = (newList: List) => {
