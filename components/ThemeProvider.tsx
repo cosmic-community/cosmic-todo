@@ -45,11 +45,8 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     document.body.classList.toggle('dark', newTheme === 'dark')
   }
 
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return <>{children}</>
-  }
-
+  // Changed: Always provide context, even before mount
+  // This prevents SSR errors when components try to access theme
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
