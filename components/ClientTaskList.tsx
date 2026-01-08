@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ChevronRight } from 'lucide-react'
 import TaskCard from './TaskCard'
 import AddTaskForm from './AddTaskForm'
@@ -17,6 +17,8 @@ export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps
   const [isLoading, setIsLoading] = useState(true)
   // Changed: Add state for collapsible completed section
   const [showCompleted, setShowCompleted] = useState(false)
+  // Changed: Track tasks that are currently celebrating (showing confetti + fade out)
+  const [celebratingTasks, setCelebratingTasks] = useState<Map<string, number>>(new Map())
 
   // Fetch tasks and lists
   useEffect(() => {
@@ -52,32 +54,67 @@ export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps
     fetchData()
   }, [listId, listSlug])
 
-  const handleOptimisticToggle = (taskId: string) => {
-    setTasks(tasks.map(t => 
-      t.id === taskId 
-        ? { ...t, metadata: { ...t.metadata, completed: !t.metadata.completed } }
-        : t
-    ))
-  }
+  // Changed: Updated toggle handler to track celebrating tasks with proper timing
+  const handleOptimisticToggle = useCallback((taskId: string) => {
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId)
+      if (task) {
+        const newCompletedState = !task.metadata.completed
+        
+        // Changed: If task is becoming completed, add to celebrating map with timestamp
+        if (newCompletedState) {
+          setCelebratingTasks(prevCelebrating => {
+            const newMap = new Map(prevCelebrating)
+            newMap.set(taskId, Date.now())
+            return newMap
+          })
+          
+          // Changed: Increased delay to 1800ms to match TaskCard's full animation duration
+          // TaskCard shows: 1200ms confetti + 500ms collapse + 100ms buffer = 1800ms total
+          setTimeout(() => {
+            setCelebratingTasks(prevCelebrating => {
+              const newMap = new Map(prevCelebrating)
+              newMap.delete(taskId)
+              return newMap
+            })
+          }, 1800)
+        }
+      }
+      
+      return prev.map(t => 
+        t.id === taskId 
+          ? { ...t, metadata: { ...t.metadata, completed: !t.metadata.completed } }
+          : t
+      )
+    })
+  }, [])
 
-  const handleOptimisticDelete = (taskId: string) => {
-    setTasks(tasks.filter(t => t.id !== taskId))
-  }
+  const handleOptimisticDelete = useCallback((taskId: string) => {
+    // Changed: Also remove from celebrating if deleting
+    setCelebratingTasks(prev => {
+      const newMap = new Map(prev)
+      newMap.delete(taskId)
+      return newMap
+    })
+    setTasks(prev => prev.filter(t => t.id !== taskId))
+  }, [])
 
-  const handleOptimisticUpdate = (taskId: string, updates: Partial<Task['metadata']>) => {
-    setTasks(tasks.map(t => 
+  const handleOptimisticUpdate = useCallback((taskId: string, updates: Partial<Task['metadata']>) => {
+    setTasks(prev => prev.map(t => 
       t.id === taskId 
         ? { ...t, metadata: { ...t.metadata, ...updates } }
         : t
     ))
-  }
+  }, [])
 
-  const handleOptimisticAdd = (task: Task) => {
-    setTasks([...tasks, task])
-  }
+  const handleOptimisticAdd = useCallback((task: Task) => {
+    setTasks(prev => [task, ...prev])
+  }, [])
 
-  const completedTasks = tasks.filter(t => t.metadata.completed)
-  const incompleteTasks = tasks.filter(t => !t.metadata.completed)
+  // Changed: Include celebrating tasks in incomplete list so they stay visible during animation
+  const incompleteTasks = tasks.filter(t => !t.metadata.completed || celebratingTasks.has(t.id))
+  // Changed: Exclude celebrating tasks from completed list temporarily
+  const completedTasks = tasks.filter(t => t.metadata.completed && !celebratingTasks.has(t.id))
 
   if (isLoading) {
     return (

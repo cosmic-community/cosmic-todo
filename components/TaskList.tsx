@@ -53,7 +53,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     setTasks(prev => [task, ...prev])
   }, [])
 
-  // Changed: Updated toggle handler to track celebrating tasks with smoother timing
+  // Changed: Updated toggle handler to track celebrating tasks with proper timing to match TaskCard animation
   const handleOptimisticToggle = useCallback((taskId: string) => {
     setTasks(prev => {
       const task = prev.find(t => t.id === taskId)
@@ -70,14 +70,15 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
             return newMap
           })
           
-          // Changed: Remove from celebrating after animation fully completes (1000ms to match TaskCard)
+          // Changed: Increased delay to 1800ms to match TaskCard's full animation duration
+          // TaskCard shows: 1200ms confetti + 500ms collapse + 100ms buffer = 1800ms total
           setTimeout(() => {
             setCelebratingTasks(prevCelebrating => {
               const newMap = new Map(prevCelebrating)
               newMap.delete(taskId)
               return newMap
             })
-          }, 1000)
+          }, 1800)
         }
       }
       
