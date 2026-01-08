@@ -24,8 +24,19 @@ export async function POST(request: NextRequest) {
       )
     }
     
+    // Changed: Check if password_hash exists before comparing
+    // This prevents "Illegal arguments: string, object" error when password_hash is null
+    const passwordHash = user.metadata.password_hash
+    if (!passwordHash || typeof passwordHash !== 'string') {
+      console.error('User has invalid password_hash:', user.id)
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      )
+    }
+    
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.metadata.password_hash)
+    const isValidPassword = await bcrypt.compare(password, passwordHash)
     if (!isValidPassword) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
