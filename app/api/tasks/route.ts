@@ -19,19 +19,45 @@ export async function GET(request: Request) {
       
       // Changed: Filter by list if specified
       if (listId || listSlug) {
+        // Changed: First resolve the target list if we only have a slug
+        let targetListId = listId
+        let targetListSlug = listSlug
+        
+        if (listSlug && !listId) {
+          // Need to find the list by slug to get its ID for comparison
+          try {
+            const listResponse = await cosmic.objects
+              .findOne({ type: 'lists', slug: listSlug })
+              .props(['id', 'title', 'slug', 'metadata'])
+              .depth(1)
+            if (listResponse.object) {
+              targetListId = listResponse.object.id
+              targetListSlug = listResponse.object.slug
+            }
+          } catch {
+            // List not found, return empty
+            return NextResponse.json({ tasks: [] })
+          }
+        }
+        
         const filteredTasks = tasks.filter(task => {
           const taskList = task.metadata.list
           if (!taskList) return false
           
+          // Changed: Handle both string ID and resolved List object
           if (typeof taskList === 'string') {
-            return taskList === listId
+            // taskList is a string ID - compare with targetListId
+            return taskList === targetListId
           }
           
-          // taskList is a List object
-          if (listSlug) {
-            return taskList.slug === listSlug
+          // taskList is a resolved List object
+          if (targetListSlug && taskList.slug === targetListSlug) {
+            return true
           }
-          return taskList.id === listId
+          if (targetListId && taskList.id === targetListId) {
+            return true
+          }
+          return false
         })
         return NextResponse.json({ tasks: filteredTasks })
       }
