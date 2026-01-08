@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
 import { AuthUser } from '@/types'
+import crypto from 'crypto'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'your-secret-key-change-in-production'
@@ -21,6 +22,26 @@ export function generateVerificationCode(): string {
     code += characters.charAt(Math.floor(Math.random() * characters.length))
   }
   return code
+}
+
+// Changed: Added generatePasswordResetToken function for creating secure reset tokens
+export function generatePasswordResetToken(): string {
+  // Generate a secure 32-character hex token
+  return crypto.randomBytes(32).toString('hex')
+}
+
+// Changed: Added getPasswordResetExpiration function to calculate token expiration (1 hour from now)
+export function getPasswordResetExpiration(): string {
+  const expiration = new Date()
+  expiration.setHours(expiration.getHours() + 1) // Token expires in 1 hour
+  return expiration.toISOString()
+}
+
+// Changed: Added isPasswordResetTokenValid function to check if token is still valid
+export function isPasswordResetTokenValid(expirationDate: string): boolean {
+  const expiration = new Date(expirationDate)
+  const now = new Date()
+  return expiration > now
 }
 
 // Changed: Added createToken function that only creates a JWT token without setting cookie

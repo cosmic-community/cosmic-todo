@@ -121,6 +121,117 @@ export async function sendVerificationEmail(
   }
 }
 
+// Changed: Added sendPasswordResetEmail function for password reset functionality
+export async function sendPasswordResetEmail(
+  email: string,
+  displayName: string,
+  resetToken: string
+): Promise<boolean> {
+  const baseUrl = getBaseUrl()
+  const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`
+  
+  // Escape user-provided content to prevent XSS
+  const escapedDisplayName = escapeHtml(displayName)
+  
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: email,
+      subject: 'Reset your Cosmic Todo password',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width: 100%; background-color: #f3f4f6;">
+            <tr>
+              <td style="padding: 40px 20px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  <tr>
+                    <td style="padding: 40px;">
+                      <!-- Header -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
+                        <tr>
+                          <td style="vertical-align: middle;">
+                            <table role="presentation" cellpadding="0" cellspacing="0">
+                              <tr>
+                                <td style="width: 40px; height: 40px; background-color: #2563eb; border-radius: 8px; text-align: center; vertical-align: middle;">
+                                  <span style="color: #ffffff; font-size: 24px; line-height: 40px;">✓</span>
+                                </td>
+                                <td style="padding-left: 12px; font-size: 24px; font-weight: bold; color: #111827;">Cosmic Todo</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Content -->
+                      <h1 style="font-size: 24px; font-weight: 600; color: #111827; margin: 0 0 16px 0;">Reset your password 🔐</h1>
+                      
+                      <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 16px 0;">Hi ${escapedDisplayName},</p>
+                      
+                      <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 16px 0;">We received a request to reset your password for your Cosmic Todo account. Click the button below to create a new password:</p>
+                      
+                      <!-- Button -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                        <tr>
+                          <td style="background-color: #2563eb; border-radius: 8px;">
+                            <a href="${resetUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 16px;">Reset Password</a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0 0 16px 0;">Or copy and paste this link into your browser:</p>
+                      
+                      <!-- Link Box -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 16px 0; width: 100%;">
+                        <tr>
+                          <td style="background-color: #f3f4f6; border-radius: 8px; padding: 12px 16px; word-break: break-all;">
+                            <a href="${resetUrl}" style="font-size: 14px; color: #2563eb; text-decoration: none;">${resetUrl}</a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Security Notice -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px 0; width: 100%;">
+                        <tr>
+                          <td style="background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0; padding: 16px;">
+                            <p style="font-size: 14px; color: #92400e; margin: 0; font-weight: 500;">⏱️ This link will expire in 1 hour</p>
+                            <p style="font-size: 14px; color: #92400e; margin: 8px 0 0 0;">For security reasons, password reset links are only valid for a limited time.</p>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Footer -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+                        <tr>
+                          <td>
+                            <p style="font-size: 14px; color: #9ca3af; margin: 0 0 8px 0;">If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.</p>
+                            <p style="font-size: 14px; color: #9ca3af; margin: 0;">For security, this request was received from the Cosmic Todo application.</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `
+    })
+    
+    return true
+  } catch (error) {
+    console.error('Failed to send password reset email:', error)
+    return false
+  }
+}
+
 export async function sendInviteEmail(
   email: string,
   inviterName: string,
