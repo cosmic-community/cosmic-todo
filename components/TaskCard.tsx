@@ -14,7 +14,7 @@ interface TaskCardProps {
   onSyncComplete?: (taskId: string) => void
 }
 
-// Changed: Improved confetti particle that radiates outward from center in all directions
+// Changed: Simplified confetti particle without overflow issues
 function ConfettiParticle({ delay, color, index, total }: { delay: number; color: string; index: number; total: number }) {
   // Calculate angle in radians for true circular distribution
   const angle = (index / total) * Math.PI * 2
@@ -171,7 +171,7 @@ export default function TaskCard({
   
   return (
     <>
-      {/* Changed: Smoother transition with grid-based height animation for collapse - added overflow-visible */}
+      {/* Changed: Smoother transition with grid-based height animation for collapse */}
       <div 
         ref={cardRef}
         className={`grid transition-all duration-500 ease-out ${
@@ -179,11 +179,9 @@ export default function TaskCard({
             ? 'grid-rows-[0fr] opacity-0' 
             : 'grid-rows-[1fr] opacity-100'
         }`}
-        style={{ overflow: 'visible' }}
       >
-        {/* Changed: Added overflow-visible to allow confetti to display fully */}
-        <div style={{ overflow: 'visible' }}>
-          <div className="relative" style={{ overflow: 'visible' }}>
+        <div className="overflow-hidden">
+          <div className="relative">
             <div 
               className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800 ${
                 isCollapsing ? 'scale-98 -translate-y-1' : ''
@@ -192,15 +190,14 @@ export default function TaskCard({
                 // Changed: Add margin-bottom that transitions to 0 for smoother collapse
                 marginBottom: isCollapsing ? '-8px' : '0px',
                 transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-                overflow: 'visible'
               }}
               onClick={handleCardClick}
             >
-              {/* Changed: Checkbox with confetti positioned around it - explodes outward - lowered z-index */}
-              <div className="relative flex-shrink-0 flex items-center" style={{ overflow: 'visible' }}>
-                {/* Changed: Confetti celebration that radiates outward from center - z-index lowered to not overlap fixed elements */}
+              {/* Changed: Checkbox with confetti positioned around it - contained overflow */}
+              <div className="relative flex-shrink-0 flex items-center overflow-visible">
+                {/* Changed: Confetti celebration that radiates outward from center */}
                 {showCelebration && (
-                  <div className="absolute inset-0 pointer-events-none z-[5]" style={{ overflow: 'visible' }}>
+                  <div className="absolute inset-0 pointer-events-none z-[5] overflow-visible">
                     {confettiColors.map((color, i) => (
                       <ConfettiParticle key={`a-${i}`} delay={i * 25} color={color} index={i} total={confettiColors.length} />
                     ))}

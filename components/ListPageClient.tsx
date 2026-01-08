@@ -16,7 +16,7 @@ export default function ListPageClient({ slug }: ListPageClientProps) {
   const [isCreatingList, setIsCreatingList] = useState(false)
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-black">
+    <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
       {/* Mobile Header */}
       <ClientMobileHeader currentListSlug={slug} />
       
@@ -26,9 +26,9 @@ export default function ListPageClient({ slug }: ListPageClientProps) {
         onCreatingStateChange={setIsCreatingList}
       />
       
-      {/* Changed: Main Content - removed overflow-auto to allow confetti to display */}
-      <main className="flex-1 pt-16 md:pt-0" style={{ overflow: 'visible' }}>
-        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8" style={{ overflow: 'visible' }}>
+      {/* Changed: Main Content - properly scrollable with fixed header space */}
+      <main className="flex-1 pt-16 md:pt-0 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-32">
           {/* Changed: Show creating list loading state when a list is being created */}
           {isCreatingList ? (
             <SkeletonLoader variant="creating-list" />

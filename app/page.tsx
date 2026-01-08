@@ -1,41 +1,31 @@
-'use client'
-
-import { useState } from 'react'
+import ClientTaskList from '@/components/ClientTaskList'
 import ClientSidebar from '@/components/ClientSidebar'
 import ClientMobileHeader from '@/components/ClientMobileHeader'
-import ClientTaskList from '@/components/ClientTaskList'
-import SkeletonLoader from '@/components/SkeletonLoader'
+import CosmicBadge from '@/components/CosmicBadge'
 
-export default function HomePage() {
-  // Changed: Track when a list is being created to show loading state
-  const [isCreatingList, setIsCreatingList] = useState(false)
-
+export default function Home() {
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-black">
+    <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
       {/* Mobile Header */}
       <ClientMobileHeader />
       
       {/* Desktop Sidebar */}
-      <ClientSidebar onCreatingStateChange={setIsCreatingList} />
+      <ClientSidebar />
       
-      {/* Main Content */}
-      <main className="flex-1 pt-16 md:pt-0" style={{ overflow: 'visible' }}>
-        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8" style={{ overflow: 'visible' }}>
-          {/* Changed: Show creating list loading state when a list is being created */}
-          {isCreatingList ? (
-            <SkeletonLoader variant="creating-list" />
-          ) : (
-            <>
-              <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">All Tasks</h1>
-                <p className="text-gray-500 dark:text-gray-400">View all your tasks across all lists</p>
-              </div>
-              
-              <ClientTaskList />
-            </>
-          )}
+      {/* Changed: Main Content - properly scrollable */}
+      <main className="flex-1 pt-16 md:pt-0 overflow-y-auto">
+        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-32">
+          {/* Changed: Page title */}
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            All Tasks
+          </h1>
+          
+          <ClientTaskList />
         </div>
       </main>
+      
+      {/* Cosmic Badge */}
+      <CosmicBadge />
     </div>
   )
 }
