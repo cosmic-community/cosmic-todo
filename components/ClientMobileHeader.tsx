@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { List } from '@/types'
 import MobileHeader from '@/components/MobileHeader'
 
-interface ClientMobileHeaderProps {
+export interface ClientMobileHeaderProps {
   currentListSlug?: string
-  onListChange?: (slug?: string) => void // Changed: Add callback for list changes
-  onListRefresh?: () => void // Changed: Add callback for refreshing list data
+  onListChange?: (slug?: string) => void
+  onListRefresh?: () => void
 }
 
 export default function ClientMobileHeader({ currentListSlug, onListChange, onListRefresh }: ClientMobileHeaderProps) {

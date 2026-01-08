@@ -1,16 +1,14 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef, Dispatch, SetStateAction } from 'react'
+import { useRouter } from 'next/navigation'
 import { List } from '@/types'
 import Sidebar from '@/components/Sidebar'
 
-interface ClientSidebarProps {
+export interface ClientSidebarProps {
   currentListSlug?: string
   onListChange?: (slug?: string) => void
-  // Changed: Add callback for creating state to show loading in main area
-  onCreatingStateChange?: (isCreating: boolean) => void
-  // Changed: Add callback for refreshing list data
+  onCreatingStateChange?: Dispatch<SetStateAction<boolean>>
   onListRefresh?: () => void
 }
 
@@ -20,7 +18,6 @@ export default function ClientSidebar({ currentListSlug, onListChange, onCreatin
   // Changed: Track lists that are still syncing (have temporary IDs)
   const [syncingListSlugs, setSyncingListSlugs] = useState<Set<string>>(new Set())
   const router = useRouter()
-  const pathname = usePathname()
   // Track deleted list IDs to prevent them from reappearing on fetch
   const deletedListIds = useRef<Set<string>>(new Set())
 
