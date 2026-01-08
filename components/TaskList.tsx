@@ -53,7 +53,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     setTasks(prev => [task, ...prev])
   }, [])
 
-  // Changed: Updated toggle handler to track celebrating tasks with smoother timing
+  // Changed: Updated toggle handler to track celebrating tasks with proper timing to match TaskCard animation
   const handleOptimisticToggle = useCallback((taskId: string) => {
     setTasks(prev => {
       const task = prev.find(t => t.id === taskId)
@@ -70,14 +70,15 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
             return newMap
           })
           
-          // Changed: Remove from celebrating after animation fully completes (1000ms to match TaskCard)
+          // Changed: Increased delay to 1800ms to match TaskCard's full animation duration
+          // TaskCard shows: 1200ms confetti + 500ms collapse + 100ms buffer = 1800ms total
           setTimeout(() => {
             setCelebratingTasks(prevCelebrating => {
               const newMap = new Map(prevCelebrating)
               newMap.delete(taskId)
               return newMap
             })
-          }, 1000)
+          }, 1800)
         }
       }
       
@@ -137,8 +138,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   
   return (
     <>
-      {/* Changed: Task list with bottom padding for fixed add form */}
-      <div className="space-y-2 pb-24">
+      {/* Changed: Task list with bottom padding for fixed add form - added overflow-visible */}
+      <div className="space-y-2 pb-24" style={{ overflow: 'visible' }}>
         {/* Pending Tasks */}
         {pendingTasks.map((task) => (
           <TaskCard 
@@ -189,8 +190,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
         )}
       </div>
       
-      {/* Changed: Fixed Add Task Form at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 p-4 z-10">
+      {/* Changed: Fixed Add Task Form at bottom - increased z-index to be above task checkmarks */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 p-4 z-20">
         <div className="max-w-2xl mx-auto">
           <AddTaskForm 
             lists={lists} 

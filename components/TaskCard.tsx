@@ -49,6 +49,8 @@ export default function TaskCard({
   const [isFullyCollapsed, setIsFullyCollapsed] = useState(false)
   // Changed: Add state for edit modal
   const [showEditModal, setShowEditModal] = useState(false)
+  // Changed: Track if we should show the checkmark (delayed state update)
+  const [showCheckmark, setShowCheckmark] = useState(task.metadata.completed)
   const cardRef = useRef<HTMLDivElement>(null)
   
   // Changed: Track previous completed state with ref to detect transitions
@@ -57,35 +59,50 @@ export default function TaskCard({
   useEffect(() => {
     // Changed: If task just became completed (wasn't before, is now)
     if (!prevCompletedRef.current && task.metadata.completed) {
+      // Changed: Show checkmark immediately for visual feedback
+      setShowCheckmark(true)
       setShowCelebration(true)
       setIsFullyCollapsed(false)
       
-      // Changed: Start collapse after confetti peaks (400ms)
+      // Changed: Increased delay - Start collapse after confetti animation has time to display (1200ms)
       const collapseTimer = setTimeout(() => {
         setIsCollapsing(true)
-      }, 400)
+      }, 1200)
       
-      // Changed: Mark as fully collapsed after animation completes (400ms confetti + 500ms collapse)
+      // Changed: Mark as fully collapsed after animation completes (1200ms celebration + 500ms collapse)
       const fullyCollapsedTimer = setTimeout(() => {
         setIsFullyCollapsed(true)
-      }, 900)
+      }, 1700)
       
-      // Changed: Hide celebration after a bit more time to ensure smooth transition
+      // Changed: Hide celebration after transition completes
       const hideTimer = setTimeout(() => {
         setShowCelebration(false)
         setIsCollapsing(false)
-      }, 1000)
+      }, 1800)
       
       return () => {
         clearTimeout(collapseTimer)
         clearTimeout(fullyCollapsedTimer)
         clearTimeout(hideTimer)
       }
+    } else if (prevCompletedRef.current && !task.metadata.completed) {
+      // Changed: Task was uncompleted, reset states
+      setShowCheckmark(false)
+      setShowCelebration(false)
+      setIsCollapsing(false)
+      setIsFullyCollapsed(false)
     }
     
     // Changed: Update ref after checking
     prevCompletedRef.current = task.metadata.completed
   }, [task.metadata.completed])
+  
+  // Changed: Sync showCheckmark with task state for non-animated updates
+  useEffect(() => {
+    if (!showCelebration) {
+      setShowCheckmark(task.metadata.completed)
+    }
+  }, [task.metadata.completed, showCelebration])
   
   const handleToggleComplete = async () => {
     if (isUpdating) return
@@ -154,7 +171,7 @@ export default function TaskCard({
   
   return (
     <>
-      {/* Changed: Smoother transition with grid-based height animation for collapse */}
+      {/* Changed: Smoother transition with grid-based height animation for collapse - added overflow-visible */}
       <div 
         ref={cardRef}
         className={`grid transition-all duration-500 ease-out ${
@@ -162,10 +179,11 @@ export default function TaskCard({
             ? 'grid-rows-[0fr] opacity-0' 
             : 'grid-rows-[1fr] opacity-100'
         }`}
+        style={{ overflow: 'visible' }}
       >
-        {/* Changed: Removed overflow-hidden to allow confetti to display fully */}
-        <div>
-          <div className="relative">
+        {/* Changed: Added overflow-visible to allow confetti to display fully */}
+        <div style={{ overflow: 'visible' }}>
+          <div className="relative" style={{ overflow: 'visible' }}>
             <div 
               className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800 ${
                 isCollapsing ? 'scale-98 -translate-y-1' : ''
@@ -173,15 +191,16 @@ export default function TaskCard({
               style={{
                 // Changed: Add margin-bottom that transitions to 0 for smoother collapse
                 marginBottom: isCollapsing ? '-8px' : '0px',
-                transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)'
+                transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)',
+                overflow: 'visible'
               }}
               onClick={handleCardClick}
             >
-              {/* Changed: Checkbox with confetti positioned around it - explodes outward */}
-              <div className="relative flex-shrink-0 flex items-center">
-                {/* Changed: Confetti celebration that radiates outward from center */}
+              {/* Changed: Checkbox with confetti positioned around it - explodes outward - lowered z-index */}
+              <div className="relative flex-shrink-0 flex items-center" style={{ overflow: 'visible' }}>
+                {/* Changed: Confetti celebration that radiates outward from center - z-index lowered to not overlap fixed elements */}
                 {showCelebration && (
-                  <div className="absolute inset-0 pointer-events-none z-20" style={{ overflow: 'visible' }}>
+                  <div className="absolute inset-0 pointer-events-none z-[5]" style={{ overflow: 'visible' }}>
                     {confettiColors.map((color, i) => (
                       <ConfettiParticle key={`a-${i}`} delay={i * 25} color={color} index={i} total={confettiColors.length} />
                     ))}
@@ -196,17 +215,17 @@ export default function TaskCard({
                     e.stopPropagation()
                     handleToggleComplete()
                   }}
-                  className="relative z-10"
+                  className="relative z-[1]"
                   aria-label={task.metadata.completed ? 'Mark as incomplete' : 'Mark as complete'}
                   disabled={isUpdating}
                 >
-                  {/* Changed: Circle with proper flex centering */}
+                  {/* Changed: Circle with proper flex centering - use showCheckmark for visual state */}
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ease-out ${
-                    task.metadata.completed
+                    showCheckmark
                       ? 'bg-blue-600 border-blue-600'
                       : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
                   } ${showCelebration ? 'scale-110 ring-4 ring-blue-200/50 dark:ring-blue-900/50' : ''}`}>
-                    {task.metadata.completed && (
+                    {showCheckmark && (
                       <svg className={`w-3 h-3 text-white transition-transform duration-200 ease-out ${showCelebration ? 'scale-110' : ''}`} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" viewBox="0 0 24 24" stroke="currentColor">
                         <path d="M5 13l4 4L19 7"></path>
                       </svg>
@@ -215,9 +234,9 @@ export default function TaskCard({
                 </button>
               </div>
               
-              {/* Title */}
+              {/* Title - use showCheckmark for visual styling */}
               <span className={`flex-1 text-base transition-all duration-300 ease-out ${
-                task.metadata.completed ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
+                showCheckmark ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
               }`}>
                 {task.metadata.title}
               </span>

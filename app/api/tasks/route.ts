@@ -1,25 +1,120 @@
 import { NextResponse } from 'next/server'
-import { cosmic, getTasksForUser, getListsForUser } from '@/lib/cosmic'
+import { cosmic, getTasksForUser } from '@/lib/cosmic'
 import { getSession } from '@/lib/auth'
+import type { Task, List } from '@/types'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    // Changed: Parse URL to get query parameters
+    const { searchParams } = new URL(request.url)
+    const listId = searchParams.get('list')
+    const listSlug = searchParams.get('listSlug')
+    
     // Check for authenticated user
     const session = await getSession()
     
     if (session) {
       // Return only user's tasks
       const tasks = await getTasksForUser(session.user.id)
+      
+      // Changed: Filter by list if specified
+      if (listId || listSlug) {
+        const filteredTasks = tasks.filter(task => {
+          const taskList = task.metadata.list
+          if (!taskList) return false
+          
+          if (typeof taskList === 'string') {
+            return taskList === listId
+          }
+          
+          // taskList is a List object
+          if (listSlug) {
+            return taskList.slug === listSlug
+          }
+          return taskList.id === listId
+        })
+        return NextResponse.json({ tasks: filteredTasks })
+      }
+      
       return NextResponse.json({ tasks })
     }
     
-    // No auth - return empty array
-    return NextResponse.json({ tasks: [] })
-  } catch (error) {
-    // Handle 404 (no objects found) as empty array
-    if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-      return NextResponse.json({ tasks: [] })
+    // Changed: Return demo tasks for unauthenticated users
+    try {
+      const response = await cosmic.objects
+        .find({ type: 'tasks' })
+        .props(['id', 'title', 'slug', 'metadata'])
+        .depth(1)
+      
+      let tasks = response.objects as Task[]
+      
+      // Changed: Filter tasks for public/demo mode
+      // Only show tasks that belong to public lists (lists with no owner)
+      if (listId || listSlug) {
+        // First, get the list to check if it's public
+        let targetList: List | null = null
+        
+        if (listSlug) {
+          try {
+            const listResponse = await cosmic.objects
+              .findOne({ type: 'lists', slug: listSlug })
+              .props(['id', 'title', 'slug', 'metadata'])
+              .depth(1)
+            targetList = listResponse.object as List
+          } catch {
+            // List not found
+          }
+        } else if (listId) {
+          try {
+            const listResponse = await cosmic.objects
+              .findOne({ type: 'lists', id: listId })
+              .props(['id', 'title', 'slug', 'metadata'])
+              .depth(1)
+            targetList = listResponse.object as List
+          } catch {
+            // List not found
+          }
+        }
+        
+        // Filter tasks by the target list
+        tasks = tasks.filter(task => {
+          const taskList = task.metadata.list
+          if (!taskList) return false
+          
+          if (typeof taskList === 'string') {
+            return taskList === (targetList?.id || listId)
+          }
+          
+          // taskList is a List object
+          if (listSlug && targetList) {
+            return taskList.slug === listSlug || taskList.id === targetList.id
+          }
+          return taskList.id === (targetList?.id || listId)
+        })
+      } else {
+        // No specific list requested - show tasks from public lists only
+        tasks = tasks.filter(task => {
+          const taskList = task.metadata.list
+          if (!taskList) return true // Tasks without a list are shown
+          
+          if (typeof taskList === 'object') {
+            // Only show if the list has no owner (public/demo list)
+            return !taskList.metadata?.owner
+          }
+          
+          return true
+        })
+      }
+      
+      return NextResponse.json({ tasks })
+    } catch (error) {
+      // If no demo tasks exist, return empty array
+      if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
+        return NextResponse.json({ tasks: [] })
+      }
+      throw error
     }
+  } catch (error) {
     console.error('Error fetching tasks:', error)
     return NextResponse.json(
       { error: 'Failed to fetch tasks' },
@@ -30,20 +125,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      )
-    }
-    
     const data = await request.json()
+    const session = await getSession()
     
-    // Validate that the list belongs to the user
-    if (data.list) {
-      const userLists = await getListsForUser(session.user.id)
-      const listIds = userLists.map(l => l.id)
+    // Changed: Allow task creation without auth (demo mode)
+    // Validate that the list belongs to the user only if authenticated
+    if (session && data.list) {
+      const userLists = await getTasksForUser(session.user.id)
+      const listIds = userLists.map(l => typeof l.metadata.list === 'string' ? l.metadata.list : l.metadata.list?.id).filter(Boolean)
       
       if (!listIds.includes(data.list)) {
         return NextResponse.json(
@@ -53,8 +142,6 @@ export async function POST(request: Request) {
       }
     }
     
-    // Only include fields that exist in the Cosmic object type schema
-    // Note: 'starred' field is not part of the tasks object type
     const response = await cosmic.objects.insertOne({
       type: 'tasks',
       title: data.title,
