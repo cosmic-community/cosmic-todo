@@ -1,5 +1,7 @@
 'use client'
 
+import { useAuth } from '@/contexts/AuthContext'
+
 interface SkeletonLoaderProps {
   variant?: 'task' | 'list' | 'header' | 'sidebar' | 'text' | 'creating-list'
   count?: number
@@ -8,13 +10,21 @@ interface SkeletonLoaderProps {
 
 export default function SkeletonLoader({ variant = 'task', count = 1, className = '' }: SkeletonLoaderProps) {
   const skeletons = Array.from({ length: count }, (_, i) => i)
+  
+  // Changed: Get checkbox position from user preferences for task skeleton
+  const { user } = useAuth()
+  const checkboxPosition = user?.checkbox_position || 'left'
 
   if (variant === 'task') {
     return (
       <>
         {skeletons.map((i) => (
           <div key={i} className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800 animate-pulse ${className}`}>
-            <div className="flex items-center gap-3">
+            {/* Changed: Conditionally reverse flex direction based on checkbox position */}
+            <div 
+              className="flex items-center gap-3"
+              style={{ flexDirection: checkboxPosition === 'right' ? 'row-reverse' : 'row' }}
+            >
               <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-800 flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4" />
