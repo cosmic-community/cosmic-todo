@@ -4,6 +4,9 @@ import ClientMobileHeader from '@/components/ClientMobileHeader'
 import CosmicBadge from '@/components/CosmicBadge'
 
 export default function Home() {
+  // Changed: Get bucket slug from environment variable to pass to CosmicBadge
+  const bucketSlug = process.env.COSMIC_BUCKET_SLUG || ''
+  
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
       {/* Mobile Header */}
@@ -24,8 +27,8 @@ export default function Home() {
         </div>
       </main>
       
-      {/* Cosmic Badge */}
-      <CosmicBadge />
+      {/* Cosmic Badge - Changed: Pass required bucketSlug prop */}
+      <CosmicBadge bucketSlug={bucketSlug} />
     </div>
   )
 }
