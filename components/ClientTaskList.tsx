@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronRight } from 'lucide-react'
 import TaskCard from './TaskCard'
 import AddTaskForm from './AddTaskForm'
+import SkeletonLoader from './SkeletonLoader'
 import type { Task, List } from '@/types'
 
 interface ClientTaskListProps {
@@ -11,47 +12,132 @@ interface ClientTaskListProps {
   listSlug?: string
 }
 
+// Changed: Maximum time to wait for a new list to be created (30 seconds)
+const MAX_POLL_TIME = 30000
+// Changed: Polling interval (1 second)
+const POLL_INTERVAL = 1000
+
 export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [lists, setLists] = useState<List[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  // Changed: Track if we're waiting for list to be created
+  const [isWaitingForList, setIsWaitingForList] = useState(false)
+  // Changed: Track if list was found
+  const [listFound, setListFound] = useState(false)
   // Changed: Add state for collapsible completed section
   const [showCompleted, setShowCompleted] = useState(false)
   // Changed: Track tasks that are currently celebrating (showing confetti + fade out)
   const [celebratingTasks, setCelebratingTasks] = useState<Map<string, number>>(new Map())
+  // Changed: Track poll start time
+  const pollStartTime = useRef<number | null>(null)
+  // Changed: Track if component is mounted
+  const isMounted = useRef(true)
+
+  useEffect(() => {
+    isMounted.current = true
+    return () => {
+      isMounted.current = false
+    }
+  }, [])
 
   // Fetch tasks and lists
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Changed: Fetch tasks with listSlug parameter for proper filtering
-        const tasksUrl = listSlug 
-          ? `/api/tasks?listSlug=${listSlug}` 
-          : listId 
-            ? `/api/tasks?list=${listId}` 
-            : '/api/tasks'
-        const tasksResponse = await fetch(tasksUrl)
-        if (tasksResponse.ok) {
-          const tasksData = await tasksResponse.json()
-          setTasks(tasksData.tasks || [])
-        }
+    let pollTimeout: NodeJS.Timeout | null = null
 
-        // Fetch lists
+    const fetchData = async () => {
+      if (!isMounted.current) return
+
+      try {
+        // Fetch lists first to check if our list exists
         const listsResponse = await fetch('/api/lists')
+        if (!isMounted.current) return
+        
         if (listsResponse.ok) {
           const listsData = await listsResponse.json()
-          setLists(listsData.lists || [])
+          const fetchedLists = listsData.lists || []
+          setLists(fetchedLists)
+
+          // Changed: Check if the target list exists (if we're looking for a specific list)
+          if (listSlug) {
+            const targetList = fetchedLists.find((l: List) => l.slug === listSlug)
+            
+            if (targetList) {
+              // Changed: List found, fetch tasks
+              setListFound(true)
+              setIsWaitingForList(false)
+              pollStartTime.current = null
+
+              const tasksUrl = `/api/tasks?listSlug=${listSlug}`
+              const tasksResponse = await fetch(tasksUrl)
+              if (!isMounted.current) return
+              
+              if (tasksResponse.ok) {
+                const tasksData = await tasksResponse.json()
+                setTasks(tasksData.tasks || [])
+              }
+              setIsLoading(false)
+            } else {
+              // Changed: List not found - check if we should keep polling
+              if (pollStartTime.current === null) {
+                pollStartTime.current = Date.now()
+                setIsWaitingForList(true)
+                setIsLoading(false)
+              }
+
+              const elapsed = Date.now() - pollStartTime.current
+
+              if (elapsed < MAX_POLL_TIME) {
+                // Changed: Keep polling - list might still be creating
+                pollTimeout = setTimeout(fetchData, POLL_INTERVAL)
+              } else {
+                // Changed: Exceeded max poll time
+                setIsWaitingForList(false)
+                setIsLoading(false)
+              }
+            }
+          } else if (listId) {
+            // Changed: Fetch by listId
+            setListFound(true)
+            const tasksResponse = await fetch(`/api/tasks?list=${listId}`)
+            if (!isMounted.current) return
+            
+            if (tasksResponse.ok) {
+              const tasksData = await tasksResponse.json()
+              setTasks(tasksData.tasks || [])
+            }
+            setIsLoading(false)
+          } else {
+            // Changed: No specific list, fetch all tasks
+            setListFound(true)
+            const tasksResponse = await fetch('/api/tasks')
+            if (!isMounted.current) return
+            
+            if (tasksResponse.ok) {
+              const tasksData = await tasksResponse.json()
+              setTasks(tasksData.tasks || [])
+            }
+            setIsLoading(false)
+          }
+        } else {
+          setIsLoading(false)
         }
       } catch (error) {
         console.error('Error fetching data:', error)
-      } finally {
-        setIsLoading(false)
+        if (isMounted.current) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchData()
+
+    // Changed: Cleanup function
+    return () => {
+      if (pollTimeout) {
+        clearTimeout(pollTimeout)
+      }
+    }
   }, [listId, listSlug])
 
   // Changed: Updated toggle handler to track celebrating tasks with proper timing
@@ -116,11 +202,19 @@ export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps
   // Changed: Exclude celebrating tasks from completed list temporarily
   const completedTasks = tasks.filter(t => t.metadata.completed && !celebratingTasks.has(t.id))
 
-  if (isLoading) {
+  // Changed: Show loading skeleton while initially loading or waiting for list
+  if (isLoading || isWaitingForList) {
     return (
-      <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          Loading tasks...
+      <div className="flex flex-col h-full">
+        <div className="flex-1 pb-24 space-y-6">
+          {isWaitingForList && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse text-center">
+              Setting up your list...
+            </p>
+          )}
+          <div className="space-y-4">
+            <SkeletonLoader variant="task" count={3} />
+          </div>
         </div>
       </div>
     )
