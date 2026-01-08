@@ -138,8 +138,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   
   return (
     <>
-      {/* Changed: Task list with bottom padding for fixed add form */}
-      <div className="space-y-2 pb-24">
+      {/* Changed: Task list with bottom padding for fixed add form - added overflow-visible */}
+      <div className="space-y-2 pb-24" style={{ overflow: 'visible' }}>
         {/* Pending Tasks */}
         {pendingTasks.map((task) => (
           <TaskCard 
@@ -190,8 +190,8 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
         )}
       </div>
       
-      {/* Changed: Fixed Add Task Form at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 p-4 z-10">
+      {/* Changed: Fixed Add Task Form at bottom - increased z-index to be above task checkmarks */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 p-4 z-20">
         <div className="max-w-2xl mx-auto">
           <AddTaskForm 
             lists={lists} 

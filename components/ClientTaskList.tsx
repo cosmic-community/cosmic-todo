@@ -129,9 +129,9 @@ export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps
   return (
     // Changed: Use flex column with relative positioning for fixed add form
     <div className="flex flex-col h-full">
-      {/* Scrollable task area */}
-      <div className="flex-1 overflow-y-auto pb-24 space-y-6">
-        <div className="space-y-4">
+      {/* Changed: Scrollable task area with overflow-visible for confetti */}
+      <div className="flex-1 pb-24 space-y-6" style={{ overflow: 'visible' }}>
+        <div className="space-y-4" style={{ overflow: 'visible' }}>
           {incompleteTasks.map(task => (
             <TaskCard
               key={task.id}
@@ -175,8 +175,8 @@ export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps
         )}
       </div>
 
-      {/* Changed: Fixed add task form at bottom */}
-      <div className="fixed bottom-0 left-0 right-0 md:left-64 p-4 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800">
+      {/* Changed: Fixed add task form at bottom - increased z-index to be above task checkmarks */}
+      <div className="fixed bottom-0 left-0 right-0 md:left-64 p-4 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 z-20">
         <div className="max-w-2xl mx-auto">
           <AddTaskForm
             lists={lists}

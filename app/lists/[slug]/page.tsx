@@ -19,9 +19,9 @@ export default async function ListPage({
       {/* Desktop Sidebar */}
       <ClientSidebar currentListSlug={slug} />
       
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto pt-16 md:pt-0">
-        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8">
+      {/* Changed: Main Content - removed overflow-auto to allow confetti to display */}
+      <main className="flex-1 pt-16 md:pt-0" style={{ overflow: 'visible' }}>
+        <div className="max-w-2xl mx-auto px-4 py-6 md:py-8" style={{ overflow: 'visible' }}>
           <ClientListHeader listSlug={slug} />
           
           <ClientTaskList listSlug={slug} />

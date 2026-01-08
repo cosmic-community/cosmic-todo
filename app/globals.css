@@ -64,6 +64,11 @@
     --tw-scale-y: 0.98;
     transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
   }
+  
+  /* Changed: Allow overflow visible for confetti animation */
+  .overflow-visible-important {
+    overflow: visible !important;
+  }
 }
 
 /* Changed: Radial confetti animation that explodes outward from the center circle */
@@ -77,10 +82,10 @@
   }
   100% {
     transform: translate(-50%, -50%) 
-               translateX(calc(cos(var(--confetti-angle)) * 80px))
-               translateY(calc(sin(var(--confetti-angle)) * 80px))
-               rotate(720deg)
-               scale(0.3);
+                 translateX(calc(cos(var(--confetti-angle)) * 80px))
+                 translateY(calc(sin(var(--confetti-angle)) * 80px))
+                 rotate(720deg)
+                 scale(0.3);
     opacity: 0;
   }
 }
