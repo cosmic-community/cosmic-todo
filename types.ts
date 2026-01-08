@@ -14,6 +14,7 @@ export interface CosmicObject {
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 // User object type
+// Changed: Added password_reset_token and password_reset_expires fields for password reset functionality
 export interface User extends CosmicObject {
   type: 'users';
   metadata: {
@@ -22,6 +23,8 @@ export interface User extends CosmicObject {
     display_name: string;
     email_verified: boolean;
     verification_code?: string;
+    password_reset_token?: string;
+    password_reset_expires?: string;
   };
 }
 
@@ -126,4 +129,14 @@ export interface InviteData {
   email: string;
   listId: string;
   inviterName: string;
+}
+
+// Changed: Added ForgotPasswordData and ResetPasswordData types
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ResetPasswordData {
+  token: string;
+  password: string;
 }

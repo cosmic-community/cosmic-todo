@@ -226,6 +226,28 @@ export async function getUserById(id: string): Promise<User | null> {
   }
 }
 
+// Changed: Added getUserByResetToken function for password reset functionality
+export async function getUserByResetToken(token: string): Promise<User | null> {
+  try {
+    const response = await cosmic.objects
+      .find({ 
+        type: 'users',
+        'metadata.password_reset_token': token
+      })
+      .props(['id', 'title', 'slug', 'metadata'])
+    
+    if (response.objects.length > 0) {
+      return response.objects[0] as User
+    }
+    return null
+  } catch (error) {
+    if (hasStatus(error) && error.status === 404) {
+      return null
+    }
+    throw new Error('Failed to fetch user by reset token')
+  }
+}
+
 export async function createUser(data: {
   email: string;
   password_hash: string;
