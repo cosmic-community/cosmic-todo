@@ -23,13 +23,6 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     }
   }, [])
   
-  // Changed: Re-focus input whenever title is cleared (after submission)
-  useEffect(() => {
-    if (title === '' && !isSubmitting && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [title, isSubmitting])
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || isSubmitting) return
@@ -58,6 +51,15 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     const taskTitle = title
     setTitle('')
     
+    // Changed: Immediately refocus the input to keep mobile keyboard open
+    // Using requestAnimationFrame ensures this happens after React's state update
+    // but before the browser has a chance to dismiss the keyboard
+    requestAnimationFrame(() => {
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
+    })
+    
     // Send to server in background
     try {
       await fetch('/api/tasks', {
@@ -72,6 +74,10 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
       console.error('Error creating task:', error)
     } finally {
       setIsSubmitting(false)
+      // Changed: Refocus again after submission completes to ensure keyboard stays open
+      if (inputRef.current) {
+        inputRef.current.focus()
+      }
     }
   }
   
@@ -102,6 +108,8 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck="false"
+          // Changed: Added enterKeyHint to show "done" or appropriate key on mobile
+          enterKeyHint="done"
         />
       </div>
     </form>
