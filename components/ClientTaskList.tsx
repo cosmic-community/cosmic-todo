@@ -202,18 +202,33 @@ export default function ClientTaskList({ listId, listSlug }: ClientTaskListProps
   // Changed: Exclude celebrating tasks from completed list temporarily
   const completedTasks = tasks.filter(t => t.metadata.completed && !celebratingTasks.has(t.id))
 
-  // Changed: Show loading skeleton while initially loading or waiting for list
+  // Changed: Merged loading state - show improved skeleton with waiting message when applicable
   if (isLoading || isWaitingForList) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 pb-24 space-y-6">
+        {/* Skeleton task list matching the loaded UI structure */}
+        <div className="flex-1 pb-24 space-y-6" style={{ overflow: 'visible' }}>
+          {/* Changed: Show waiting message from agent branch when polling for list */}
           {isWaitingForList && (
             <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse text-center">
               Setting up your list...
             </p>
           )}
-          <div className="space-y-4">
-            <SkeletonLoader variant="task" count={3} />
+          <div className="space-y-4" style={{ overflow: 'visible' }}>
+            {/* Changed: Use 5 skeleton items from base branch for initial load, 3 when waiting for list */}
+            <SkeletonLoader variant="task" count={isWaitingForList ? 3 : 5} />
+          </div>
+        </div>
+        
+        {/* Changed: Fixed add task form skeleton at bottom - from base branch */}
+        <div className="fixed bottom-0 left-0 right-0 md:left-64 p-4 bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 z-20">
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-white dark:bg-gray-900 rounded-xl px-4 py-3 border border-gray-200 dark:border-gray-800 animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-800 flex-shrink-0" />
+                <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded flex-1" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
