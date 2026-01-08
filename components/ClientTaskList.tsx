@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Task, List } from '@/types'
 import TaskList from './TaskList'
-import AddTaskForm from './AddTaskForm'
 import SkeletonLoader from './SkeletonLoader'
 
 interface ClientTaskListProps {
@@ -12,6 +11,7 @@ interface ClientTaskListProps {
 
 export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
+  const [lists, setLists] = useState<List[]>([])
   const [list, setList] = useState<List | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -19,13 +19,8 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
   const [listRetryCount, setListRetryCount] = useState(0)
   const maxRetries = 10
 
-  // Changed: Fetch list with retry logic for newly created lists
-  const fetchList = useCallback(async () => {
-    if (!listSlug) {
-      setList(null)
-      return true // No list needed
-    }
-
+  // Changed: Fetch lists data
+  const fetchLists = useCallback(async () => {
     try {
       const response = await fetch('/api/lists')
       if (!response.ok) {
@@ -33,17 +28,21 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
       }
       
       const data = await response.json()
-      const foundList = data.lists.find((l: List) => l.slug === listSlug)
+      setLists(data.lists || [])
       
-      if (foundList) {
-        setList(foundList)
-        setListRetryCount(0)
-        return true // List found
+      if (listSlug) {
+        const foundList = data.lists.find((l: List) => l.slug === listSlug)
+        if (foundList) {
+          setList(foundList)
+          setListRetryCount(0)
+          return true // List found
+        }
+        return false // List not found
       }
       
-      return false // List not found
+      return true // No specific list needed
     } catch (err) {
-      console.error('Error fetching list:', err)
+      console.error('Error fetching lists:', err)
       return false
     }
   }, [listSlug])
@@ -71,7 +70,7 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
       setIsLoading(true)
       setError(null)
       
-      const listFound = await fetchList()
+      const listFound = await fetchLists()
       
       if (listSlug && !listFound) {
         // List not found - might still be creating
@@ -96,7 +95,7 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
     }
     
     loadData()
-  }, [listSlug, listRetryCount, fetchList, fetchTasks])
+  }, [listSlug, listRetryCount, fetchLists, fetchTasks])
 
   // Changed: Fetch tasks when list changes (after it's found)
   useEffect(() => {
@@ -104,22 +103,6 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
       fetchTasks()
     }
   }, [list, listSlug, fetchTasks])
-
-  const handleTaskCreated = (newTask: Task) => {
-    setTasks(prev => [newTask, ...prev])
-  }
-
-  const handleTaskUpdated = (taskId: string, updates: Partial<Task>) => {
-    setTasks(prev => 
-      prev.map(task => 
-        task.id === taskId ? { ...task, ...updates } : task
-      )
-    )
-  }
-
-  const handleTaskDeleted = (taskId: string) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId))
-  }
 
   // Changed: Show loading while list is being found (for newly created lists)
   if (isLoading || (listSlug && !list && listRetryCount > 0 && listRetryCount < maxRetries)) {
@@ -138,17 +121,13 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
     )
   }
 
+  // Changed: Use TaskList with correct props interface
   return (
     <div>
-      <AddTaskForm 
-        listId={list?.id} 
-        onTaskCreated={handleTaskCreated}
-      />
-      
       <TaskList 
-        tasks={tasks}
-        onTaskUpdated={handleTaskUpdated}
-        onTaskDeleted={handleTaskDeleted}
+        initialTasks={tasks}
+        lists={lists}
+        listSlug={listSlug}
       />
     </div>
   )
