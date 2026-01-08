@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Task, List } from '@/types'
 import TaskList from './TaskList'
 import SkeletonLoader from './SkeletonLoader'
@@ -18,9 +18,14 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
   // Changed: Track retry attempts for newly created lists
   const [listRetryCount, setListRetryCount] = useState(0)
   const maxRetries = 10
+  
+  // Changed: Use refs to track fetch state and prevent infinite loops
+  const isFetchingRef = useRef(false)
+  const lastListIdRef = useRef<string | null>(null)
+  const hasFetchedTasksRef = useRef(false)
 
-  // Changed: Fetch lists data
-  const fetchLists = useCallback(async () => {
+  // Changed: Fetch lists data - memoized without list dependency
+  const fetchLists = useCallback(async (): Promise<{ found: boolean; foundList: List | null }> => {
     try {
       const response = await fetch('/api/lists')
       if (!response.ok) {
@@ -33,23 +38,22 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
       if (listSlug) {
         const foundList = data.lists.find((l: List) => l.slug === listSlug)
         if (foundList) {
-          setList(foundList)
-          setListRetryCount(0)
-          return true // List found
+          return { found: true, foundList }
         }
-        return false // List not found
+        return { found: false, foundList: null }
       }
       
-      return true // No specific list needed
+      return { found: true, foundList: null }
     } catch (err) {
       console.error('Error fetching lists:', err)
-      return false
+      return { found: false, foundList: null }
     }
   }, [listSlug])
 
-  const fetchTasks = useCallback(async () => {
+  // Changed: Fetch tasks - takes listId as parameter to avoid dependency on list state
+  const fetchTasksForList = useCallback(async (listId: string | null) => {
     try {
-      const url = listSlug && list ? `/api/tasks?listId=${list.id}` : '/api/tasks'
+      const url = listSlug && listId ? `/api/tasks?listId=${listId}` : '/api/tasks'
       const response = await fetch(url)
       
       if (!response.ok) {
@@ -62,19 +66,26 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
       console.error('Error fetching tasks:', err)
       setError('Failed to load tasks')
     }
-  }, [listSlug, list])
+  }, [listSlug])
 
-  // Changed: Initial load with retry logic for list
+  // Changed: Single effect for initial load and retry logic - prevents infinite loops
   useEffect(() => {
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      return
+    }
+    
     const loadData = async () => {
+      isFetchingRef.current = true
       setIsLoading(true)
       setError(null)
       
-      const listFound = await fetchLists()
+      const { found, foundList } = await fetchLists()
       
-      if (listSlug && !listFound) {
+      if (listSlug && !found) {
         // List not found - might still be creating
         if (listRetryCount < maxRetries) {
+          isFetchingRef.current = false
           setTimeout(() => {
             setListRetryCount(prev => prev + 1)
           }, 500)
@@ -82,27 +93,44 @@ export default function ClientTaskList({ listSlug }: ClientTaskListProps) {
         } else {
           setError('List not found')
           setIsLoading(false)
+          isFetchingRef.current = false
           return
         }
       }
       
-      // If no listSlug or list was found, fetch tasks
-      if (!listSlug || listFound) {
-        await fetchTasks()
+      // Update list state if we found it
+      if (foundList) {
+        setList(foundList)
+        setListRetryCount(0)
+        
+        // Changed: Only fetch tasks if we haven't already fetched for this list
+        if (lastListIdRef.current !== foundList.id) {
+          lastListIdRef.current = foundList.id
+          await fetchTasksForList(foundList.id)
+          hasFetchedTasksRef.current = true
+        }
+      } else if (!listSlug) {
+        // No specific list needed, fetch all tasks
+        if (!hasFetchedTasksRef.current) {
+          await fetchTasksForList(null)
+          hasFetchedTasksRef.current = true
+        }
       }
       
       setIsLoading(false)
+      isFetchingRef.current = false
     }
     
     loadData()
-  }, [listSlug, listRetryCount, fetchLists, fetchTasks])
+  }, [listSlug, listRetryCount, fetchLists, fetchTasksForList])
 
-  // Changed: Fetch tasks when list changes (after it's found)
+  // Changed: Reset refs when listSlug changes (navigating to different list)
   useEffect(() => {
-    if (list && listSlug) {
-      fetchTasks()
-    }
-  }, [list, listSlug, fetchTasks])
+    hasFetchedTasksRef.current = false
+    lastListIdRef.current = null
+    setList(null)
+    setListRetryCount(0)
+  }, [listSlug])
 
   // Changed: Show loading while list is being found (for newly created lists)
   if (isLoading || (listSlug && !list && listRetryCount > 0 && listRetryCount < maxRetries)) {
