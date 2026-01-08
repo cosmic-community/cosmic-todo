@@ -43,11 +43,16 @@ export default function CreateListForm({ onListCreated, onListReplaced }: Create
     setIsSubmitting(true)
     setError('')
 
-    // Changed: Create optimistic list with a temporary ID
-    const tempId = `temp-${Date.now()}`
+    // Changed: Generate slug with timestamp to match API behavior
+    const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+    const timestamp = Date.now()
+    const slugWithTimestamp = `${baseSlug}-${timestamp}`
+    
+    // Changed: Create optimistic list with the same slug format as API
+    const tempId = `temp-${timestamp}`
     const optimisticList: List = {
       id: tempId,
-      slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      slug: slugWithTimestamp, // Changed: Use slug with timestamp
       title: name.trim(),
       type: 'lists',
       created_at: new Date().toISOString(),
