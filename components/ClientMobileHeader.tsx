@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { List } from '@/types'
 import MobileHeader from '@/components/MobileHeader'
 
-interface ClientMobileHeaderProps {
+export interface ClientMobileHeaderProps {
   currentListSlug?: string
-  onListChange?: (slug?: string) => void // Changed: Add callback for list changes
+  onListChange?: (slug?: string) => void
+  onListRefresh?: () => void
 }
 
-export default function ClientMobileHeader({ currentListSlug, onListChange }: ClientMobileHeaderProps) {
+export default function ClientMobileHeader({ currentListSlug, onListChange, onListRefresh }: ClientMobileHeaderProps) {
   const [lists, setLists] = useState<List[]>([])
   const [currentList, setCurrentList] = useState<List | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
@@ -75,6 +76,11 @@ export default function ClientMobileHeader({ currentListSlug, onListChange }: Cl
         title: updates.name || prev.title,
         metadata: { ...prev.metadata, ...updates }
       } : undefined)
+    }
+    
+    // Changed: Trigger parent refresh when list is updated
+    if (onListRefresh) {
+      onListRefresh()
     }
   }
 
