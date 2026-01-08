@@ -6,7 +6,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'default-secret-change-in-production'
 )
 
-// Changed: Added createToken function (alias for JWT token creation without setting cookie)
+// Creates a JWT token for the user
 export async function createToken(user: AuthUser): Promise<string> {
   const token = await new SignJWT({ user })
     .setProtectedHeader({ alg: 'HS256' })
@@ -17,7 +17,7 @@ export async function createToken(user: AuthUser): Promise<string> {
   return token
 }
 
-// Changed: Added setAuthCookie function to set the auth cookie separately
+// Sets the auth cookie with the provided token
 export async function setAuthCookie(token: string): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.set('auth-token', token, {
@@ -29,18 +29,20 @@ export async function setAuthCookie(token: string): Promise<void> {
   })
 }
 
-// Changed: Added clearAuthCookie function (alias for deleteSession)
+// Clears the auth cookie (logout)
 export async function clearAuthCookie(): Promise<void> {
   const cookieStore = await cookies()
   cookieStore.delete('auth-token')
 }
 
+// Creates a session by generating token and setting cookie
 export async function createSession(user: AuthUser): Promise<string> {
   const token = await createToken(user)
   await setAuthCookie(token)
   return token
 }
 
+// Gets the current session from the auth cookie
 export async function getSession(): Promise<AuthSession | null> {
   const cookieStore = await cookies()
   const token = cookieStore.get('auth-token')?.value
@@ -60,20 +62,20 @@ export async function getSession(): Promise<AuthSession | null> {
   }
 }
 
+// Deletes the current session
 export async function deleteSession(): Promise<void> {
   await clearAuthCookie()
 }
 
-// Changed: Added updateSession function to update session with new user data including checkbox_position
+// Updates the session with new user data
 export async function updateSession(user: AuthUser): Promise<string> {
   const token = await createToken(user)
   await setAuthCookie(token)
   return token
 }
 
-// Changed: Added generateVerificationCode function for email verification
+// Generates a 6-character alphanumeric verification code
 export function generateVerificationCode(): string {
-  // Generate a 6-character alphanumeric code
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let code = ''
   for (let i = 0; i < 6; i++) {
@@ -82,9 +84,8 @@ export function generateVerificationCode(): string {
   return code
 }
 
-// Changed: Added generatePasswordResetToken function for password reset
+// Generates a 32-character secure password reset token
 export function generatePasswordResetToken(): string {
-  // Generate a secure random token for password reset
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   let token = ''
   for (let i = 0; i < 32; i++) {
@@ -93,14 +94,14 @@ export function generatePasswordResetToken(): string {
   return token
 }
 
-// Changed: Added getPasswordResetExpiration function to get expiration timestamp (1 hour from now)
+// Returns ISO timestamp for password reset expiration (1 hour from now)
 export function getPasswordResetExpiration(): string {
   const expirationTime = new Date()
   expirationTime.setHours(expirationTime.getHours() + 1)
   return expirationTime.toISOString()
 }
 
-// Changed: Added isPasswordResetTokenValid function to check if reset token is still valid
+// Checks if a password reset token is still valid (not expired)
 export function isPasswordResetTokenValid(expirationTimestamp: string): boolean {
   const expirationDate = new Date(expirationTimestamp)
   const now = new Date()
