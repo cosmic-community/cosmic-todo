@@ -7,7 +7,8 @@ import AddTaskForm from '@/components/AddTaskForm'
 import EmptyState from '@/components/EmptyState'
 import { useAuth } from '@/contexts/AuthContext'
 
-interface ListPageClientProps {
+// Changed: Export interface for external use
+export interface ListPageClientProps {
   initialTasks: Task[]
   lists: List[]
   listSlug: string
@@ -104,9 +105,9 @@ export default function ListPageClient({
         />
       ))}
       
-      {/* Empty state when no tasks */}
+      {/* Empty state when no tasks - Changed: Pass listName instead of listSlug */}
       {incompleteTasks.length === 0 && completedTasks.length === 0 && (
-        <EmptyState listSlug={listSlug} />
+        <EmptyState listName={listSlug.replace(/-/g, ' ')} />
       )}
       
       {/* Completed tasks section */}

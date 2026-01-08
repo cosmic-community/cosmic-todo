@@ -2,16 +2,13 @@
 
 import { CheckCircle2, Plus, Sparkles } from 'lucide-react'
 
-interface EmptyStateProps {
+// Changed: Export interface and remove listSlug prop (use listName instead)
+export interface EmptyStateProps {
   variant?: 'tasks' | 'completed' | 'list'
   listName?: string
-  listSlug?: string // Changed: Added listSlug prop for compatibility
 }
 
-export default function EmptyState({ variant = 'tasks', listName, listSlug }: EmptyStateProps) {
-  // Changed: Use listSlug to derive display name if listName not provided
-  const displayName = listName || (listSlug ? listSlug.replace(/-/g, ' ') : undefined)
-  
+export default function EmptyState({ variant = 'tasks', listName }: EmptyStateProps) {
   if (variant === 'completed') {
     return (
       <div className="text-center py-12">
@@ -51,10 +48,10 @@ export default function EmptyState({ variant = 'tasks', listName, listSlug }: Em
 
       {/* Text content */}
       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-        {displayName ? `${displayName} is empty` : 'No tasks yet'}
+        {listName ? `${listName} is empty` : 'No tasks yet'}
       </h3>
       <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6 leading-relaxed">
-        {displayName 
+        {listName 
           ? 'Start adding tasks to this list to stay organized and track your progress.'
           : 'Create your first task to get started. Stay organized and accomplish more!'}
       </p>

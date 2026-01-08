@@ -7,7 +7,8 @@ import AddTaskForm from '@/components/AddTaskForm'
 import EmptyState from '@/components/EmptyState'
 import { useAuth } from '@/contexts/AuthContext'
 
-interface ClientTaskListProps {
+// Changed: Export interface for external use
+export interface ClientTaskListProps {
   initialTasks: Task[]
   lists: List[]
   listSlug?: string
@@ -110,9 +111,9 @@ export default function ClientTaskList({
         />
       ))}
       
-      {/* Empty state when no incomplete tasks */}
+      {/* Empty state when no incomplete tasks - Changed: Pass listName instead of listSlug */}
       {incompleteTasks.length === 0 && completedTasks.length === 0 && !showAddForm && (
-        <EmptyState listSlug={listSlug} />
+        <EmptyState listName={listSlug ? listSlug.replace(/-/g, ' ') : undefined} />
       )}
       
       {/* Completed tasks section */}
