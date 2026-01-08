@@ -168,3 +168,9 @@ export function useAuth() {
   }
   return context
 }
+
+// Changed: Added a safe hook that doesn't throw when used outside AuthProvider
+export function useAuthSafe() {
+  const context = useContext(AuthContext)
+  return context // Returns undefined if not within provider
+}
