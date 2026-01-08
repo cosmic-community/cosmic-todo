@@ -5,9 +5,13 @@ import { CheckCircle2, Plus, Sparkles } from 'lucide-react'
 interface EmptyStateProps {
   variant?: 'tasks' | 'completed' | 'list'
   listName?: string
+  listSlug?: string // Changed: Added listSlug prop for compatibility
 }
 
-export default function EmptyState({ variant = 'tasks', listName }: EmptyStateProps) {
+export default function EmptyState({ variant = 'tasks', listName, listSlug }: EmptyStateProps) {
+  // Changed: Use listSlug to derive display name if listName not provided
+  const displayName = listName || (listSlug ? listSlug.replace(/-/g, ' ') : undefined)
+  
   if (variant === 'completed') {
     return (
       <div className="text-center py-12">
@@ -47,10 +51,10 @@ export default function EmptyState({ variant = 'tasks', listName }: EmptyStatePr
 
       {/* Text content */}
       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-        {listName ? `${listName} is empty` : 'No tasks yet'}
+        {displayName ? `${displayName} is empty` : 'No tasks yet'}
       </h3>
       <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-6 leading-relaxed">
-        {listName 
+        {displayName 
           ? 'Start adding tasks to this list to stay organized and track your progress.'
           : 'Create your first task to get started. Stay organized and accomplish more!'}
       </p>
@@ -58,7 +62,7 @@ export default function EmptyState({ variant = 'tasks', listName }: EmptyStatePr
       {/* Helper hint */}
       <div className="inline-flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800/50 px-4 py-2 rounded-full">
         <Plus className="w-4 h-4" />
-        <span>Use the form below to add a task</span>
+        <span>Use the form above to add a task</span>
       </div>
     </div>
   )

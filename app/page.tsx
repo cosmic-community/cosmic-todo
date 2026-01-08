@@ -2,10 +2,27 @@ import ClientTaskList from '@/components/ClientTaskList'
 import ClientSidebar from '@/components/ClientSidebar'
 import ClientMobileHeader from '@/components/ClientMobileHeader'
 import CosmicBadge from '@/components/CosmicBadge'
+import { getTasks, getLists } from '@/lib/cosmic'
+import { Task, List } from '@/types'
 
-export default function Home() {
+export default async function Home() {
   // Changed: Get bucket slug from environment variable to pass to CosmicBadge
   const bucketSlug = process.env.COSMIC_BUCKET_SLUG || ''
+  
+  // Changed: Fetch tasks and lists server-side
+  let initialTasks: Task[] = []
+  let lists: List[] = []
+  
+  try {
+    const [tasksResult, listsResult] = await Promise.all([
+      getTasks(),
+      getLists()
+    ])
+    initialTasks = tasksResult
+    lists = listsResult
+  } catch (error) {
+    console.error('Error fetching data:', error)
+  }
   
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
@@ -23,7 +40,11 @@ export default function Home() {
             All Tasks
           </h1>
           
-          <ClientTaskList />
+          {/* Changed: Pass required props to ClientTaskList */}
+          <ClientTaskList 
+            initialTasks={initialTasks} 
+            lists={lists} 
+          />
         </div>
       </main>
       
