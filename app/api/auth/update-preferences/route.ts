@@ -3,7 +3,10 @@ import { getSession, updateSession } from '@/lib/auth'
 import { cosmicWrite } from '@/lib/cosmic'
 import { CheckboxPosition, ColorTheme, StyleTheme } from '@/types'
 
-// Changed: Added four new feminine themes to valid style themes
+// Changed: Valid color themes for validation
+const VALID_COLOR_THEMES: ColorTheme[] = ['light', 'dark', 'system']
+
+// Changed: Valid style themes for validation - includes all feminine themes
 const VALID_STYLE_THEMES: StyleTheme[] = ['default', 'ocean', 'forest', 'sunset', 'rose', 'lavender', 'peach', 'mint']
 
 export async function POST(request: NextRequest) {
@@ -32,8 +35,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate color_theme if provided
-    if (color_theme && !['light', 'dark', 'system'].includes(color_theme)) {
+    // Changed: Validate color_theme if provided using the valid themes array
+    if (color_theme && !VALID_COLOR_THEMES.includes(color_theme)) {
       return NextResponse.json(
         { error: 'Invalid color theme. Must be "light", "dark", or "system"' },
         { status: 400 }
@@ -56,8 +59,14 @@ export async function POST(request: NextRequest) {
       metadataUpdate.checkbox_position = checkbox_position === 'left' ? 'Left Side' : 'Right Side'
     }
     
+    // Changed: Map color theme values
     if (color_theme) {
-      metadataUpdate.color_theme = color_theme === 'light' ? 'Light' : color_theme === 'dark' ? 'Dark' : 'System'
+      const colorThemeMap: Record<ColorTheme, string> = {
+        'light': 'Light',
+        'dark': 'Dark',
+        'system': 'System'
+      }
+      metadataUpdate.color_theme = colorThemeMap[color_theme]
     }
 
     // Changed: Add style_theme mapping - updated to include new feminine themes

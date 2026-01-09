@@ -14,7 +14,7 @@ interface EditTaskModalProps {
 export default function EditTaskModal({ task, lists, onClose, onOptimisticUpdate }: EditTaskModalProps) {
   const [title, setTitle] = useState(task.metadata.title)
   const [description, setDescription] = useState(task.metadata.description || '')
-  const [priority, setPriority] = useState<TaskPriority>(task.metadata.priority?.key || 'medium')
+  const [priority, setPriority] = useState<TaskPriority>((task.metadata.priority?.key as TaskPriority) || 'medium')
   const [dueDate, setDueDate] = useState(task.metadata.due_date || '')
   const [listId, setListId] = useState(
     task.metadata.list && typeof task.metadata.list === 'object' 
