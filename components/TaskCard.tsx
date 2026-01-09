@@ -168,11 +168,6 @@ export default function TaskCard({
   
   // Changed: More vibrant confetti colors
   const confettiColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
-  
-  // Changed: Don't render at all once fully collapsed - this prevents the jump
-  if (isFullyCollapsed) {
-    return null
-  }
 
   // Changed: Checkbox component for reuse
   const CheckboxButton = (
@@ -216,7 +211,7 @@ export default function TaskCard({
   
   return (
     <>
-      {/* Changed: 2x faster transition - reduced from 500ms to 250ms */}
+      {/* Changed: Use visibility and height instead of conditional render to prevent layout jump */}
       <div 
         ref={cardRef}
         className={`grid transition-all duration-250 ease-out ${
@@ -224,6 +219,13 @@ export default function TaskCard({
             ? 'grid-rows-[0fr] opacity-0' 
             : 'grid-rows-[1fr] opacity-100'
         }`}
+        style={{
+          // Changed: Hide completely when fully collapsed but keep in DOM briefly
+          visibility: isFullyCollapsed ? 'hidden' : 'visible',
+          position: isFullyCollapsed ? 'absolute' : 'relative',
+          pointerEvents: isFullyCollapsed ? 'none' : 'auto',
+        }}
+        aria-hidden={isFullyCollapsed}
       >
         {/* Changed: Removed overflow-hidden to allow confetti to be visible outside the card */}
         <div className="min-h-0">
