@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Task, List } from '@/types'
+import { Task, List, StyleTheme } from '@/types'
 import { Trash2 } from 'lucide-react'
 import EditTaskModal from '@/components/EditTaskModal'
 import { useAuth } from '@/contexts/AuthContext'
@@ -162,18 +162,19 @@ export default function TaskCard({
     setShowEditModal(true)
   }
   
-  // Changed: Theme-aware confetti colors
-  const getConfettiColors = () => {
-    switch (styleTheme) {
-      case 'ocean':
-        return ['#06b6d4', '#0891b2', '#22d3ee', '#67e8f9', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4']
-      case 'forest':
-        return ['#22c55e', '#16a34a', '#4ade80', '#86efac', '#84cc16', '#a3e635', '#bef264', '#d9f99d']
-      case 'sunset':
-        return ['#f97316', '#ea580c', '#fb923c', '#fdba74', '#ef4444', '#f87171', '#fca5a5', '#fecaca']
-      default: // default blue
-        return ['#3b82f6', '#2563eb', '#60a5fa', '#93c5fd', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']
+  // Changed: Theme-aware confetti colors - properly typed
+  const getConfettiColors = (): string[] => {
+    const themeColors: Record<StyleTheme, string[]> = {
+      'ocean': ['#06b6d4', '#0891b2', '#22d3ee', '#67e8f9', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4'],
+      'forest': ['#22c55e', '#16a34a', '#4ade80', '#86efac', '#84cc16', '#a3e635', '#bef264', '#d9f99d'],
+      'sunset': ['#f97316', '#ea580c', '#fb923c', '#fdba74', '#ef4444', '#f87171', '#fca5a5', '#fecaca'],
+      'rose': ['#ec4899', '#db2777', '#f472b6', '#f9a8d4', '#e879f9', '#d946ef', '#c026d3', '#a855f7'],
+      'lavender': ['#8b5cf6', '#7c3aed', '#a78bfa', '#c4b5fd', '#a855f7', '#9333ea', '#7e22ce', '#6b21a8'],
+      'peach': ['#fb923c', '#f97316', '#fdba74', '#fed7aa', '#fca5a5', '#f87171', '#ef4444', '#fb7185'],
+      'mint': ['#34d399', '#10b981', '#6ee7b7', '#a7f3d0', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e'],
+      'default': ['#3b82f6', '#2563eb', '#60a5fa', '#93c5fd', '#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe']
     }
+    return themeColors[styleTheme] || themeColors['default']
   }
   
   const confettiColors = getConfettiColors()

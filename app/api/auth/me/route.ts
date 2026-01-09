@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getSession } from '@/lib/auth'
 import { getUserById } from '@/lib/cosmic'
+import { CheckboxPosition, ColorTheme, StyleTheme } from '@/types'
 
 export async function GET() {
   try {
@@ -24,9 +25,19 @@ export async function GET() {
     }
 
     // Changed: Extract checkbox_position, color_theme, and style_theme from metadata
+    // Handle both string values and object values with key property
     const checkboxPosition = user.metadata.checkbox_position
     const colorTheme = user.metadata.color_theme
     const styleTheme = user.metadata.style_theme
+    
+    // Changed: Helper function to extract value from potential object or string
+    const extractValue = <T extends string>(value: T | { key: string; value: string } | undefined, defaultValue: T): T => {
+      if (!value) return defaultValue
+      if (typeof value === 'object' && 'key' in value) {
+        return value.key as T
+      }
+      return value as T
+    }
     
     return NextResponse.json({
       user: {
@@ -34,10 +45,10 @@ export async function GET() {
         email: user.metadata.email,
         display_name: user.metadata.display_name,
         email_verified: user.metadata.email_verified,
-        // Changed: Map select-dropdown values back to keys
-        checkbox_position: checkboxPosition?.key || 'left',
-        color_theme: colorTheme?.key || 'system',
-        style_theme: styleTheme?.key || 'default'
+        // Changed: Safely extract values handling both string and object formats
+        checkbox_position: extractValue<CheckboxPosition>(checkboxPosition, 'left'),
+        color_theme: extractValue<ColorTheme>(colorTheme, 'system'),
+        style_theme: extractValue<StyleTheme>(styleTheme, 'default')
       }
     })
   } catch (error) {

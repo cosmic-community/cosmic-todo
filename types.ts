@@ -1,3 +1,6 @@
+// Changed: Added TaskPriority type export
+export type TaskPriority = 'low' | 'medium' | 'high'
+
 export interface Task {
   id: string
   title: string
@@ -51,9 +54,9 @@ export interface User {
     verification_code?: string
     password_reset_token?: string
     password_reset_expires?: string
-    checkbox_position?: CheckboxPosition
-    color_theme?: ColorTheme
-    style_theme?: StyleTheme
+    checkbox_position?: CheckboxPosition | { key: string; value: string }
+    color_theme?: ColorTheme | { key: string; value: string }
+    style_theme?: StyleTheme | { key: string; value: string }
   }
 }
 
@@ -68,5 +71,7 @@ export interface AuthUser {
 }
 
 export type CheckboxPosition = 'left' | 'right'
-export type ColorTheme = 'blue' | 'purple' | 'green' | 'red' | 'orange' | 'pink'
-export type StyleTheme = 'default' | 'minimal' | 'compact'
+// Changed: Updated ColorTheme to include light, dark, system options used in the app
+export type ColorTheme = 'light' | 'dark' | 'system'
+// Changed: Updated StyleTheme to include all themes used in the app
+export type StyleTheme = 'default' | 'ocean' | 'forest' | 'sunset' | 'rose' | 'lavender' | 'peach' | 'mint'

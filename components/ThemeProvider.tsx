@@ -8,6 +8,9 @@ type Theme = 'light' | 'dark'
 // Changed: Added four new feminine themes to the valid style themes list
 const VALID_STYLE_THEMES: StyleTheme[] = ['default', 'ocean', 'forest', 'sunset', 'rose', 'lavender', 'peach', 'mint']
 
+// Changed: Valid color themes for validation
+const VALID_COLOR_THEMES: ColorTheme[] = ['light', 'dark', 'system']
+
 interface ThemeContextType {
   theme: Theme
   userThemePreference: ColorTheme
@@ -69,7 +72,11 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       }
       return 'dark' // Default for SSR
     }
-    return preference as Theme
+    // Changed: Handle light and dark directly
+    if (preference === 'light' || preference === 'dark') {
+      return preference
+    }
+    return 'dark' // Fallback
   }, [])
 
   // Changed: Initialize theme on mount from localStorage only - updated validation
@@ -78,7 +85,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     
     // Check localStorage for saved color preference
     const savedTheme = localStorage.getItem('theme') as ColorTheme | null
-    if (savedTheme && ['light', 'dark', 'system'].includes(savedTheme)) {
+    if (savedTheme && VALID_COLOR_THEMES.includes(savedTheme)) {
       setUserThemePreference(savedTheme)
       applyTheme(resolveTheme(savedTheme))
     } else {
@@ -112,7 +119,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Changed: Toggle between light and dark (not system)
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light'
+    const newTheme: ColorTheme = theme === 'light' ? 'dark' : 'light'
     setUserThemePreference(newTheme)
     localStorage.setItem('theme', newTheme)
     applyTheme(newTheme)
@@ -133,7 +140,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
 
   // Changed: Method to sync theme with user preference from auth context - updated validation
   const syncWithUserPreference = useCallback((colorPreference: ColorTheme | undefined, stylePreference: StyleTheme | undefined) => {
-    if (colorPreference && ['light', 'dark', 'system'].includes(colorPreference)) {
+    if (colorPreference && VALID_COLOR_THEMES.includes(colorPreference)) {
       setUserThemePreference(colorPreference)
       localStorage.setItem('theme', colorPreference)
       applyTheme(resolveTheme(colorPreference))
