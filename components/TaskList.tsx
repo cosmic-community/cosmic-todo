@@ -58,7 +58,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     setTasks(prev => [task, ...prev])
   }, [])
 
-  // Changed: 2x faster - Updated toggle handler to match TaskCard's 900ms total animation
+  // Changed: Half speed - Updated toggle handler to match TaskCard's 1800ms total animation
   const handleOptimisticToggle = useCallback((taskId: string) => {
     setTasks(prev => {
       const task = prev.find(t => t.id === taskId)
@@ -75,15 +75,15 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
             return newMap
           })
           
-          // Changed: 2x faster - Reduced from 1800ms to 900ms to match TaskCard's animation
-          // TaskCard shows: 600ms confetti + 250ms collapse + 50ms buffer = 900ms total
+          // Changed: Half speed - Increased from 900ms to 1800ms to match TaskCard's animation
+          // TaskCard shows: 1200ms confetti + 500ms collapse + 100ms buffer = 1800ms total
           setTimeout(() => {
             setCelebratingTasks(prevCelebrating => {
               const newMap = new Map(prevCelebrating)
               newMap.delete(taskId)
               return newMap
             })
-          }, 900)
+          }, 1800)
         }
       }
       

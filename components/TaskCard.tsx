@@ -69,21 +69,21 @@ export default function TaskCard({
       setShowCelebration(true)
       setIsFullyCollapsed(false)
       
-      // Changed: 2x faster - Start collapse after confetti animation (600ms)
+      // Changed: Half speed - Start collapse after confetti animation (1200ms instead of 600ms)
       const collapseTimer = setTimeout(() => {
         setIsCollapsing(true)
-      }, 600)
+      }, 1200)
       
-      // Changed: 2x faster - Mark as fully collapsed after animation (600ms + 250ms = 850ms)
+      // Changed: Half speed - Mark as fully collapsed after animation (1200ms + 500ms = 1700ms)
       const fullyCollapsedTimer = setTimeout(() => {
         setIsFullyCollapsed(true)
-      }, 850)
+      }, 1700)
       
-      // Changed: 2x faster - Hide celebration after transition completes (900ms)
+      // Changed: Half speed - Hide celebration after transition completes (1800ms instead of 900ms)
       const hideTimer = setTimeout(() => {
         setShowCelebration(false)
         setIsCollapsing(false)
-      }, 900)
+      }, 1800)
       
       return () => {
         clearTimeout(collapseTimer)
@@ -176,10 +176,10 @@ export default function TaskCard({
       {showCelebration && (
         <div className="absolute inset-0 pointer-events-none z-[5]">
           {confettiColors.map((color, i) => (
-            <ConfettiParticle key={`a-${i}`} delay={i * 12.5} color={color} index={i} total={confettiColors.length} />
+            <ConfettiParticle key={`a-${i}`} delay={i * 25} color={color} index={i} total={confettiColors.length} />
           ))}
           {confettiColors.map((color, i) => (
-            <ConfettiParticle key={`b-${i}`} delay={i * 12.5 + 30} color={color} index={i + confettiColors.length} total={confettiColors.length * 2} />
+            <ConfettiParticle key={`b-${i}`} delay={i * 25 + 60} color={color} index={i + confettiColors.length} total={confettiColors.length * 2} />
           ))}
         </div>
       )}
@@ -214,7 +214,7 @@ export default function TaskCard({
       {/* Changed: Use visibility and height instead of conditional render to prevent layout jump */}
       <div 
         ref={cardRef}
-        className={`grid transition-all duration-250 ease-out ${
+        className={`grid transition-all duration-500 ease-out ${
           isCollapsing 
             ? 'grid-rows-[0fr] opacity-0' 
             : 'grid-rows-[1fr] opacity-100'
@@ -235,8 +235,8 @@ export default function TaskCard({
                 isCollapsing ? 'scale-98 -translate-y-1' : ''
               }`}
               style={{
-                // Changed: Removed margin-bottom transition to prevent layout jump
-                transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+                // Changed: Updated transition to 500ms for half speed
+                transition: 'all 500ms cubic-bezier(0.4, 0, 0.2, 1)',
                 // Changed: Reverse flex direction when checkbox is on right
                 flexDirection: checkboxPosition === 'right' ? 'row-reverse' : 'row',
               }}
