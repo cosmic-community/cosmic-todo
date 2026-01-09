@@ -10,14 +10,20 @@ export async function GET() {
     if (session) {
       // Return only user's lists
       const lists = await getListsForUser(session.user.id)
-      return NextResponse.json({ lists })
+      return NextResponse.json({ lists }, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
     }
     
     // Changed: Return demo lists for unauthenticated users
     try {
       const response = await cosmic.objects
         .find({ type: 'lists' })
-        .props(['id', 'title', 'slug', 'metadata'])
+        .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
         .depth(1)
       
       // Filter to show only demo lists (lists without owner or with empty owner)
@@ -26,11 +32,23 @@ export async function GET() {
         return !owner || owner === '' || (typeof owner === 'object' && !owner.id)
       })
       
-      return NextResponse.json({ lists: demoLists })
+      return NextResponse.json({ lists: demoLists }, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
     } catch (error) {
       // If no demo lists exist, return empty array
       if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-        return NextResponse.json({ lists: [] })
+        return NextResponse.json({ lists: [] }, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
       }
       throw error
     }

@@ -36,7 +36,13 @@ export async function GET(request: Request) {
             }
           } catch {
             // List not found, return empty
-            return NextResponse.json({ tasks: [] })
+            return NextResponse.json({ tasks: [] }, {
+              headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              }
+            })
           }
         }
         
@@ -59,17 +65,29 @@ export async function GET(request: Request) {
           }
           return false
         })
-        return NextResponse.json({ tasks: filteredTasks })
+        return NextResponse.json({ tasks: filteredTasks }, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
       }
       
-      return NextResponse.json({ tasks })
+      return NextResponse.json({ tasks }, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
     }
     
     // Changed: Return demo tasks for unauthenticated users
     try {
       const response = await cosmic.objects
         .find({ type: 'tasks' })
-        .props(['id', 'title', 'slug', 'metadata'])
+        .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
         .depth(1)
       
       let tasks = response.objects as Task[]
@@ -132,11 +150,23 @@ export async function GET(request: Request) {
         })
       }
       
-      return NextResponse.json({ tasks })
+      return NextResponse.json({ tasks }, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
     } catch (error) {
       // If no demo tasks exist, return empty array
       if (error && typeof error === 'object' && 'status' in error && error.status === 404) {
-        return NextResponse.json({ tasks: [] })
+        return NextResponse.json({ tasks: [] }, {
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
       }
       throw error
     }

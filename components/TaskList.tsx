@@ -31,14 +31,76 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   const deletedTaskIdsRef = useRef<Set<string>>(new Set())
   // Changed: Track tasks that are currently celebrating (showing confetti)
   const [celebratingTasks, setCelebratingTasks] = useState<Set<string>>(new Set())
+  // Changed: Track tasks with pending server updates to preserve optimistic state
+  const pendingServerUpdatesRef = useRef<Set<string>>(new Set())
 
   // Changed: Get current list name for empty state
   const currentList = listSlug ? lists.find(l => l.slug === listSlug) : null
   const listName = currentList?.metadata?.name
 
-  // Changed: Update tasks when initialTasks prop changes (list navigation)
+  // Changed: Smart merge of initialTasks with local state to preserve optimistic updates
   useEffect(() => {
-    setTasks(initialTasks)
+    setTasks(prevTasks => {
+      // If we have no previous tasks, just use initialTasks
+      if (prevTasks.length === 0) {
+        // Filter out any deleted tasks
+        return initialTasks.filter(t => !deletedTaskIdsRef.current.has(t.id))
+      }
+      
+      // Create a map of current tasks by ID for quick lookup
+      const currentTasksMap = new Map(prevTasks.map(t => [t.id, t]))
+      
+      // Create a map of new tasks from server
+      const serverTasksMap = new Map(initialTasks.map(t => [t.id, t]))
+      
+      // Build the merged task list
+      const mergedTasks: Task[] = []
+      const processedIds = new Set<string>()
+      
+      // First, process tasks that exist in server response
+      for (const serverTask of initialTasks) {
+        // Skip deleted tasks
+        if (deletedTaskIdsRef.current.has(serverTask.id)) {
+          continue
+        }
+        
+        const localTask = currentTasksMap.get(serverTask.id)
+        const pendingState = pendingStateChangesRef.current.get(serverTask.id)
+        const hasPendingUpdate = pendingServerUpdatesRef.current.has(serverTask.id)
+        
+        if (localTask && (pendingState || hasPendingUpdate)) {
+          // Changed: Preserve local optimistic state if there's a pending update
+          // But merge in any other updated fields from server
+          mergedTasks.push({
+            ...serverTask,
+            metadata: {
+              ...serverTask.metadata,
+              // Preserve local completed state if pending
+              completed: pendingState?.completed !== undefined 
+                ? pendingState.completed 
+                : (hasPendingUpdate ? localTask.metadata.completed : serverTask.metadata.completed)
+            }
+          })
+        } else {
+          // No pending state, use server data
+          mergedTasks.push(serverTask)
+        }
+        
+        processedIds.add(serverTask.id)
+      }
+      
+      // Add any optimistically created tasks that aren't in server response yet
+      for (const localTask of prevTasks) {
+        if (!processedIds.has(localTask.id) && pendingNewTasksRef.current.has(localTask.id)) {
+          // This is a newly created task that hasn't synced yet
+          if (!deletedTaskIdsRef.current.has(localTask.id)) {
+            mergedTasks.push(localTask)
+          }
+        }
+      }
+      
+      return mergedTasks
+    })
   }, [initialTasks])
 
   // Changed: Cleanup on unmount
@@ -59,6 +121,9 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
 
   // Changed: Toggle handler - add to celebrating set when completing
   const handleOptimisticToggle = useCallback((taskId: string) => {
+    // Changed: Mark this task as having a pending server update
+    pendingServerUpdatesRef.current.add(taskId)
+    
     setTasks(prev => {
       const task = prev.find(t => t.id === taskId)
       if (task) {
@@ -100,6 +165,7 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     // Remove from all pending tracking
     pendingNewTasksRef.current.delete(taskId)
     pendingStateChangesRef.current.delete(taskId)
+    pendingServerUpdatesRef.current.delete(taskId)
     // Changed: Also remove from celebrating if deleting
     setCelebratingTasks(prev => {
       const newSet = new Set(prev)
@@ -112,10 +178,13 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     // This prevents the task from reappearing during the delete request
     setTimeout(() => {
       deletedTaskIdsRef.current.delete(taskId)
-    }, 5000)
+    }, 10000) // Changed: Increased to 10 seconds for better reliability
   }, [])
 
   const handleOptimisticUpdate = useCallback((taskId: string, updates: Partial<Task['metadata']>) => {
+    // Changed: Mark this task as having a pending server update
+    pendingServerUpdatesRef.current.add(taskId)
+    
     // Track completed state if it's being updated
     if (updates.completed !== undefined) {
       const currentPending = pendingStateChangesRef.current.get(taskId) || {}
@@ -129,9 +198,11 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
     ))
   }, [])
 
-  // Function to clear pending state for a task (called after successful server sync)
+  // Changed: Function to clear pending state for a task (called after successful server sync)
   const clearPendingState = useCallback((taskId: string) => {
     pendingStateChangesRef.current.delete(taskId)
+    pendingServerUpdatesRef.current.delete(taskId)
+    pendingNewTasksRef.current.delete(taskId)
   }, [])
 
   // Changed: Include celebrating tasks in pending list so they stay visible during animation

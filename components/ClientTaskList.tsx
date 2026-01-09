@@ -7,8 +7,11 @@ import SkeletonLoader from './SkeletonLoader'
 
 interface ClientTaskListProps {
   listSlug?: string
-  refreshKey?: number // Changed: Added refreshKey prop to trigger refresh from parent
+  refreshKey?: number
 }
+
+// Changed: Polling interval for real-time updates (5 seconds)
+const POLLING_INTERVAL = 5000
 
 export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -16,7 +19,6 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
   const [list, setList] = useState<List | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  // Changed: Track retry attempts for newly created lists
   const [listRetryCount, setListRetryCount] = useState(0)
   const maxRetries = 10
   
@@ -24,17 +26,41 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
   const isFetchingRef = useRef(false)
   const lastListIdRef = useRef<string | null>(null)
   const hasFetchedTasksRef = useRef(false)
+  // Changed: Ref for polling interval
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  // Changed: Track if component is mounted
+  const isMountedRef = useRef(true)
+  // Changed: Track last fetch timestamp to detect changes
+  const lastTasksHashRef = useRef<string>('')
+
+  // Changed: Generate a simple hash of tasks for change detection
+  const generateTasksHash = useCallback((taskList: Task[]): string => {
+    return taskList
+      .map(t => `${t.id}:${t.metadata.completed}:${t.metadata.title}:${t.modified_at || ''}`)
+      .sort()
+      .join('|')
+  }, [])
 
   // Changed: Fetch lists data - memoized without list dependency
   const fetchLists = useCallback(async (): Promise<{ found: boolean; foundList: List | null }> => {
     try {
-      const response = await fetch('/api/lists')
+      // Changed: Add cache-busting timestamp to prevent stale data
+      const response = await fetch(`/api/lists?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
       if (!response.ok) {
         throw new Error('Failed to fetch lists')
       }
       
       const data = await response.json()
-      setLists(data.lists || [])
+      
+      if (isMountedRef.current) {
+        setLists(data.lists || [])
+      }
       
       if (listSlug) {
         const foundList = data.lists.find((l: List) => l.slug === listSlug)
@@ -52,24 +78,88 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
   }, [listSlug])
 
   // Changed: Fetch tasks - takes listId as parameter to avoid dependency on list state
-  // Changed: Fixed query parameter to use 'list' instead of 'listId' to match API route
-  const fetchTasksForList = useCallback(async (listId: string | null) => {
+  // Changed: Added silent mode for polling to avoid flashing loading states
+  const fetchTasksForList = useCallback(async (listId: string | null, silent: boolean = false): Promise<Task[]> => {
     try {
-      // Changed: Use 'list' query param to match the API route expectation
-      const url = listSlug && listId ? `/api/tasks?list=${listId}` : '/api/tasks'
-      const response = await fetch(url)
+      // Changed: Add cache-busting timestamp to prevent stale data
+      const url = listSlug && listId 
+        ? `/api/tasks?list=${listId}&_t=${Date.now()}` 
+        : `/api/tasks?_t=${Date.now()}`
+      
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
       
       if (!response.ok) {
         throw new Error('Failed to fetch tasks')
       }
       
       const data = await response.json()
-      setTasks(data.tasks || [])
+      const fetchedTasks = data.tasks || []
+      
+      // Changed: Only update state if data actually changed (prevents unnecessary re-renders)
+      const newHash = generateTasksHash(fetchedTasks)
+      
+      if (isMountedRef.current && (newHash !== lastTasksHashRef.current || !silent)) {
+        lastTasksHashRef.current = newHash
+        setTasks(fetchedTasks)
+      }
+      
+      return fetchedTasks
     } catch (err) {
       console.error('Error fetching tasks:', err)
-      setError('Failed to load tasks')
+      if (!silent && isMountedRef.current) {
+        setError('Failed to load tasks')
+      }
+      return []
     }
-  }, [listSlug])
+  }, [listSlug, generateTasksHash])
+
+  // Changed: Polling function for real-time updates
+  const pollForUpdates = useCallback(async () => {
+    if (!isMountedRef.current || isFetchingRef.current) {
+      return
+    }
+
+    // Changed: Silently fetch updates without showing loading state
+    const currentListId = lastListIdRef.current
+    
+    if (listSlug && currentListId) {
+      // Fetch tasks for the specific list
+      await fetchTasksForList(currentListId, true)
+    } else if (!listSlug) {
+      // Fetch all tasks
+      await fetchTasksForList(null, true)
+    }
+    
+    // Changed: Also refresh lists to detect any changes (new lists, updated names, etc.)
+    await fetchLists()
+  }, [listSlug, fetchTasksForList, fetchLists])
+
+  // Changed: Start polling when component mounts and data is loaded
+  const startPolling = useCallback(() => {
+    // Clear any existing interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+    }
+    
+    // Start new polling interval
+    pollingIntervalRef.current = setInterval(() => {
+      pollForUpdates()
+    }, POLLING_INTERVAL)
+  }, [pollForUpdates])
+
+  // Changed: Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+      pollingIntervalRef.current = null
+    }
+  }, [])
 
   // Changed: Single effect for initial load and retry logic - prevents infinite loops
   useEffect(() => {
@@ -120,17 +210,23 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
         }
       }
       
-      setIsLoading(false)
+      if (isMountedRef.current) {
+        setIsLoading(false)
+      }
       isFetchingRef.current = false
+      
+      // Changed: Start polling after initial load completes
+      startPolling()
     }
     
     loadData()
-  }, [listSlug, listRetryCount, fetchLists, fetchTasksForList])
+  }, [listSlug, listRetryCount, fetchLists, fetchTasksForList, startPolling])
 
   // Changed: Reset refs when listSlug changes (navigating to different list)
   useEffect(() => {
     hasFetchedTasksRef.current = false
     lastListIdRef.current = null
+    lastTasksHashRef.current = ''
     setList(null)
     setListRetryCount(0)
   }, [listSlug])
@@ -141,6 +237,7 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
       // Reset refs and trigger a fresh fetch
       hasFetchedTasksRef.current = false
       lastListIdRef.current = null
+      lastTasksHashRef.current = ''
       isFetchingRef.current = false
       setListRetryCount(prev => prev) // Trigger re-fetch by updating state
       
@@ -151,17 +248,51 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
         
         if (foundList) {
           setList(foundList)
+          lastListIdRef.current = foundList.id
           await fetchTasksForList(foundList.id)
         } else if (!listSlug) {
           await fetchTasksForList(null)
         }
         
-        setIsLoading(false)
+        if (isMountedRef.current) {
+          setIsLoading(false)
+        }
       }
       
       refreshData()
     }
   }, [refreshKey, fetchLists, fetchTasksForList, listSlug])
+
+  // Changed: Cleanup polling on unmount and handle visibility changes
+  useEffect(() => {
+    isMountedRef.current = true
+    
+    // Changed: Handle tab visibility - pause polling when tab is hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        // Resume polling and immediately fetch fresh data
+        pollForUpdates()
+        startPolling()
+      }
+    }
+    
+    // Changed: Handle window focus - refresh data when user returns to tab
+    const handleFocus = () => {
+      pollForUpdates()
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+    
+    return () => {
+      isMountedRef.current = false
+      stopPolling()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [stopPolling, startPolling, pollForUpdates])
 
   // Changed: Show loading while list is being found (for newly created lists)
   if (isLoading || (listSlug && !list && listRetryCount > 0 && listRetryCount < maxRetries)) {

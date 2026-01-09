@@ -20,7 +20,7 @@ export async function getTasks(): Promise<Task[]> {
   try {
     const response = await cosmic.objects
       .find({ type: 'tasks' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
       .depth(1)
     
     return response.objects as Task[]
@@ -38,7 +38,7 @@ export async function getTasksForUser(userId: string): Promise<Task[]> {
     // Get all tasks with depth to resolve relationships
     const response = await cosmic.objects
       .find({ type: 'tasks' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
       .depth(1)
     
     const allTasks = response.objects as Task[]
@@ -84,7 +84,7 @@ export async function getLists(): Promise<List[]> {
   try {
     const response = await cosmic.objects
       .find({ type: 'lists' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
     
     return response.objects as List[]
   } catch (error) {
@@ -100,7 +100,7 @@ export async function getListsForUser(userId: string): Promise<List[]> {
   try {
     const response = await cosmic.objects
       .find({ type: 'lists' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
       .depth(1)
     
     const allLists = response.objects as List[]
@@ -176,7 +176,7 @@ export async function getTasksByList(listId: string): Promise<Task[]> {
         type: 'tasks',
         'metadata.list': listId
       })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'modified_at'])
       .depth(1)
     
     return response.objects as Task[]
