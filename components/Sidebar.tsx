@@ -102,7 +102,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
     e.stopPropagation()
     setOpenMenuId(null)
     handleOptimisticDelete(listId)
-    
+
     // Send to server in background
     fetch(`/api/lists/${listId}`, {
       method: 'DELETE'
@@ -114,12 +114,12 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
   // Changed: Handle list navigation - prevent click on syncing lists
   const handleListNavigation = (e: React.MouseEvent, slug?: string, isSyncing?: boolean) => {
     e.preventDefault()
-    
+
     // Changed: Don't allow navigation to syncing lists
     if (isSyncing) {
       return
     }
-    
+
     if (onListClick) {
       onListClick(slug)
     }
@@ -162,7 +162,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Cosmic Todo</h2>
             </button>
           </div>
-          
+
           {/* Changed: Show user menu if authenticated, auth buttons with demo copy if not */}
           {isAuthenticated ? (
             <div className="mb-4 -mx-3">
@@ -194,21 +194,20 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
               </div>
             </div>
           )}
-          
+
           <nav className="space-y-1">
             <button
               onClick={(e) => handleListNavigation(e, undefined)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                !currentListSlug
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${!currentListSlug
                   ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
+                }`}
             >
               {/* Changed: Use Inbox icon instead of ListTodo */}
               <Inbox className="w-5 h-5" />
               <span className="font-medium">All Tasks</span>
             </button>
-            
+
             {/* Changed: Only show skeleton during initial load, not when switching lists */}
             {isLoading && lists.length === 0 ? (
               <div className="pt-4">
@@ -226,29 +225,35 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                     Lists
                   </h3>
                 </div>
-                
+
                 {lists.map((list) => {
                   // Changed: Check if this list is still syncing (has temp ID)
                   const isSyncing = syncingListSlugs.has(list.slug)
-                  
+
                   return (
                     <div key={list.id} className="relative group">
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={isSyncing ? -1 : 0}
                         onClick={(e) => handleListNavigation(e, list.slug, isSyncing)}
-                        disabled={isSyncing}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                          isSyncing
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleListNavigation(e as unknown as React.MouseEvent, list.slug, isSyncing)
+                          }
+                        }}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isSyncing
                             ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
                             : currentListSlug === list.slug
                               ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                        }`}
+                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+                          }`}
                       >
                         {/* Changed: Show spinner if syncing, otherwise show color dot */}
                         {isSyncing ? (
                           <Loader2 className="w-4 h-4 flex-shrink-0 animate-spin text-gray-400" />
                         ) : (
-                          <div 
+                          <div
                             className="w-4 h-4 rounded-full flex-shrink-0"
                             style={{ backgroundColor: list.metadata.color || '#3b82f6' }}
                           />
@@ -257,14 +262,14 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                         <span className={`font-medium flex-1 truncate text-left ${isSyncing ? 'text-gray-500 dark:text-gray-400' : ''}`}>
                           {list.metadata.name || list.title}
                         </span>
-                        
+
                         {/* Changed: Show "Saving..." text if syncing */}
                         {isSyncing && (
                           <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                             Saving...
                           </span>
                         )}
-                        
+
                         {/* More options button - hide if syncing */}
                         {!isSyncing && (
                           <button
@@ -275,11 +280,11 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
                         )}
-                      </button>
-                      
+                      </div>
+
                       {/* Dropdown menu - don't show for syncing lists */}
                       {openMenuId === list.id && !isSyncing && (
-                        <div 
+                        <div
                           ref={menuRef}
                           className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
                         >
@@ -317,7 +322,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
 
             {/* Changed: Always show create list form (works in demo mode) */}
             <div className="pt-4">
-              <CreateListForm 
+              <CreateListForm
                 onListCreated={handleListCreated}
                 onListReplaced={handleListReplaced}
                 onCreatingStateChange={handleCreatingStateChange}
