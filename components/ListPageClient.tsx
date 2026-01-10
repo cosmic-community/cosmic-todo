@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import ClientTaskList from '@/components/ClientTaskList'
 import ClientSidebar from '@/components/ClientSidebar'
 import ClientMobileHeader from '@/components/ClientMobileHeader'
@@ -15,6 +15,9 @@ interface ListPageClientProps {
 export default function ListPageClient({ slug: initialSlug }: ListPageClientProps) {
   const router = useRouter()
   const pathname = usePathname()
+  
+  // Changed: Ref to scrollable container to reset scroll on navigation
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   
   // Changed: Track current list slug for client-side navigation without page reload
   const [currentListSlug, setCurrentListSlug] = useState<string | undefined>(
@@ -36,6 +39,13 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
       setCurrentListSlug(slugFromUrl)
     }
   }, [pathname])
+
+  // Changed: Reset scroll position when list changes to prevent title being cut off
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+  }, [currentListSlug])
 
   // Changed: Callback to handle list selection without reloading page
   const handleListChange = useCallback((newSlug?: string) => {
@@ -74,7 +84,7 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
       
       {/* Changed: Main Content - flex-1 with overflow-y-auto for internal scrolling only */}
       <main className="flex-1 pt-20 md:pt-0 flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-4 pt-4 pb-32 md:py-8">
             {/* Changed: Show creating list loading state when a list is being created */}
             {isCreatingList ? (

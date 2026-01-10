@@ -17,9 +17,10 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when shouldFocus becomes true (after task submission)
+  // Changed: Use preventScroll to avoid iOS scrolling the page when focusing
   useEffect(() => {
     if (shouldFocus && !isSubmitting) {
-      inputRef.current?.focus()
+      inputRef.current?.focus({ preventScroll: true })
       setShouldFocus(false)
     }
   }, [shouldFocus, isSubmitting])

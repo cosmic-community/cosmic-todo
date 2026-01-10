@@ -41,9 +41,10 @@ export default function CreateListModal({
   const inputRef = useRef<HTMLInputElement>(null)
   
   // Focus input on mount
+  // Changed: Use preventScroll to avoid iOS scrolling issues
   useEffect(() => {
     if (inputRef.current) {
-      inputRef.current.focus()
+      inputRef.current.focus({ preventScroll: true })
     }
   }, [])
   
