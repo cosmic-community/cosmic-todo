@@ -1,23 +1,21 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef, Dispatch, SetStateAction } from 'react'
 import { List } from '@/types'
 import MobileHeader from '@/components/MobileHeader'
 
 export interface ClientMobileHeaderProps {
   currentListSlug?: string
   onListChange?: (slug?: string) => void
+  onCreatingStateChange?: Dispatch<SetStateAction<boolean>>
   onListRefresh?: () => void
 }
 
-export default function ClientMobileHeader({ currentListSlug, onListChange, onListRefresh }: ClientMobileHeaderProps) {
+export default function ClientMobileHeader({ currentListSlug, onListChange, onCreatingStateChange, onListRefresh }: ClientMobileHeaderProps) {
   const [lists, setLists] = useState<List[]>([])
-  const [currentList, setCurrentList] = useState<List | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(true)
   // Changed: Track lists that are still syncing (have temporary IDs)
   const [syncingListSlugs, setSyncingListSlugs] = useState<Set<string>>(new Set())
-  const router = useRouter()
   // Track deleted list IDs to prevent them from reappearing on fetch
   const deletedListIds = useRef<Set<string>>(new Set())
 
@@ -44,22 +42,15 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onLi
           
           return [...filteredLists, ...uniqueTempLists]
         })
-        
-        if (currentListSlug) {
-          const found = filteredLists.find((l: List) => l.slug === currentListSlug)
-          setCurrentList(found)
-        } else {
-          setCurrentList(undefined)
-        }
       }
     } catch (error) {
       console.error('Error fetching lists:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [currentListSlug])
+  }, [])
 
-  // Changed: Fetch only on mount and when currentListSlug changes, no polling
+  // Changed: Fetch only on mount, no polling
   useEffect(() => {
     fetchLists()
   }, [fetchLists])
@@ -106,15 +97,6 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onLi
       )
     )
     
-    // Update current list if it was the one edited
-    if (currentList?.id === listId) {
-      setCurrentList(prev => prev ? {
-        ...prev,
-        title: updates.name || prev.title,
-        metadata: { ...prev.metadata, ...updates }
-      } : undefined)
-    }
-    
     // Changed: Trigger parent refresh when list is updated
     if (onListRefresh) {
       onListRefresh()
@@ -140,9 +122,8 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onLi
       })
     }
     
-    // Clear current list if it was deleted
+    // If we're currently viewing the deleted list, go back to all tasks
     if (deletedList && deletedList.slug === currentListSlug) {
-      setCurrentList(undefined)
       if (onListChange) {
         onListChange(undefined)
       }
@@ -153,13 +134,6 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onLi
   const handleListClick = (slug?: string) => {
     if (onListChange) {
       onListChange(slug)
-    } else {
-      // Fallback to router navigation if no callback provided
-      if (slug) {
-        router.push(`/lists/${slug}`)
-      } else {
-        router.push('/')
-      }
     }
   }
 
@@ -168,18 +142,26 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onLi
     fetchLists()
   }
 
+  // Changed: Handle creating state change and pass to parent
+  const handleCreatingStateChange = (isCreating: boolean) => {
+    if (onCreatingStateChange) {
+      onCreatingStateChange(isCreating)
+    }
+  }
+
   return (
     <MobileHeader 
       lists={lists} 
-      currentList={currentList}
+      currentListSlug={currentListSlug} 
       isLoading={isLoading}
       syncingListSlugs={syncingListSlugs}
-      onListDeleted={handleListDeleted}
       onListCreated={handleListCreated}
       onListReplaced={handleListReplaced}
       onListUpdated={handleListUpdated}
+      onListDeleted={handleListDeleted}
       onListClick={handleListClick}
       onRefresh={handleRefresh}
+      onCreatingStateChange={handleCreatingStateChange}
     />
   )
 }

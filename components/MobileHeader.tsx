@@ -3,39 +3,52 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { List } from '@/types'
-import { Menu, X, CheckSquare, Inbox, MoreHorizontal, Pencil, Trash2, UserPlus, LogIn, UserPlus as SignupIcon, Loader2 } from 'lucide-react'
+import { CheckSquare, Menu, X, Settings, MoreHorizontal, Pencil, Trash2, UserPlus, Inbox, LogIn, UserPlus as SignupIcon, Loader2 } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import CreateListForm from './CreateListForm'
 import EditListModal from './EditListModal'
-import InviteModal from './InviteModal'
 import SkeletonLoader from './SkeletonLoader'
 import UserMenu from './UserMenu'
+import InviteModal from './InviteModal'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface MobileHeaderProps {
   lists: List[]
-  currentList?: List
+  currentListSlug?: string
   isLoading?: boolean
-  // Changed: Added syncingListSlugs prop for loading state on newly created lists
+  // Changed: Track lists that are still syncing (have temporary IDs)
   syncingListSlugs?: Set<string>
-  onListDeleted: (listId: string) => void
-  onListCreated: (list: List) => void
-  // Changed: Added onListReplaced callback for when API completes
+  onListCreated?: (list: List) => void
   onListReplaced?: (tempId: string, realList: List) => void
-  onListUpdated: (listId: string, updates: Partial<List['metadata']>) => void
+  onListUpdated?: (listId: string, updates: Partial<List['metadata']>) => void
+  onListDeleted?: (listId: string) => void
   onListClick?: (slug?: string) => void
   onRefresh?: () => void
+  // Changed: Add callback for creating state to show loading in main area
+  onCreatingStateChange?: (isCreating: boolean) => void
 }
 
-export default function MobileHeader({ lists, currentList, isLoading = false, syncingListSlugs = new Set(), onListDeleted, onListCreated, onListReplaced, onListUpdated, onListClick, onRefresh }: MobileHeaderProps) {
-  const [isOpen, setIsOpen] = useState(false)
+export default function MobileHeader({ 
+  lists, 
+  currentListSlug, 
+  isLoading = false, 
+  syncingListSlugs = new Set(),
+  onListCreated, 
+  onListReplaced, 
+  onListUpdated, 
+  onListDeleted,
+  onListClick,
+  onRefresh,
+  onCreatingStateChange
+}: MobileHeaderProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [editingList, setEditingList] = useState<List | null>(null)
   const [invitingList, setInvitingList] = useState<List | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { isAuthenticated } = useAuth()
 
-  // Close menu when clicking outside
+  // Close dropdown menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -47,11 +60,17 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [currentListSlug])
+
   const handleListCreated = (list: List) => {
-    onListCreated(list)
+    if (onListCreated) {
+      onListCreated(list)
+    }
   }
 
-  // Changed: Added handler to pass through list replacement
   const handleListReplaced = (tempId: string, realList: List) => {
     if (onListReplaced) {
       onListReplaced(tempId, realList)
@@ -59,12 +78,15 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
   }
 
   const handleOptimisticUpdate = (listId: string, updates: Partial<List['metadata']>) => {
-    onListUpdated(listId, updates)
+    if (onListUpdated) {
+      onListUpdated(listId, updates)
+    }
   }
 
   const handleOptimisticDelete = (listId: string) => {
-    onListDeleted(listId)
-    setIsOpen(false)
+    if (onListDeleted) {
+      onListDeleted(listId)
+    }
   }
 
   const toggleMenu = (e: React.MouseEvent, listId: string) => {
@@ -84,7 +106,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
     e.preventDefault()
     e.stopPropagation()
     setOpenMenuId(null)
-    // Only allow invite if authenticated
+    // Changed: Only allow invite if authenticated
     if (isAuthenticated) {
       setInvitingList(list)
     }
@@ -104,7 +126,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
     })
   }
 
-  // Changed: Handle list navigation - prevent click on syncing lists
+  // Changed: Handle list navigation without page refresh
   const handleListNavigation = (e: React.MouseEvent, slug?: string, isSyncing?: boolean) => {
     e.preventDefault()
     
@@ -113,54 +135,100 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
       return
     }
     
-    setIsOpen(false)
+    setIsMenuOpen(false)
+    
     if (onListClick) {
       onListClick(slug)
     }
   }
 
+  // Changed: Handle navigation to newly created list
+  const handleNavigateToList = (slug: string) => {
+    setIsMenuOpen(false)
+    if (onListClick) {
+      onListClick(slug)
+    }
+  }
+
+  // Changed: Handle creating state change
+  const handleCreatingStateChange = (isCreating: boolean) => {
+    if (onCreatingStateChange) {
+      onCreatingStateChange(isCreating)
+    }
+  }
+
+  // Get current list title
+  const currentList = lists.find(l => l.slug === currentListSlug)
+  const headerTitle = currentList?.metadata.name || 'All Tasks'
+
   return (
     <>
-      {/* Mobile Header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 z-40">
+      {/* Fixed Mobile Header */}
+      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 safe-area-inset-top">
         <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => setIsMenuOpen(true)}
+            className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            aria-label="Open menu"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          
           <div className="flex items-center gap-2">
-            {/* Changed: Use accent color for logo */}
-            <CheckSquare className="w-6 h-6 text-accent" />
-            {/* Changed: Made title static "Cosmic Todo" */}
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Cosmic Todo
-            </h1>
+            <CheckSquare className="w-5 h-5 text-accent" />
+            <span className="font-semibold text-gray-900 dark:text-white truncate max-w-[150px]">
+              {headerTitle}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-1">
             <ThemeToggle />
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-              aria-label="Toggle menu"
+            <Link
+              href="/settings"
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              aria-label="Settings"
             >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+              <Settings className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
-      {isOpen && (
-        <div className="md:hidden fixed inset-0 z-30 bg-black bg-opacity-50" onClick={() => setIsOpen(false)}>
+      {/* Mobile Slide-out Menu */}
+      {isMenuOpen && (
+        <>
+          {/* Backdrop */}
           <div 
-            className="absolute top-16 right-0 bottom-0 w-64 bg-white dark:bg-gray-900 shadow-lg overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              {/* Changed: Show user menu if authenticated, auth buttons with demo notice if not */}
+            className="md:hidden fixed inset-0 bg-black/50 z-50"
+            onClick={() => setIsMenuOpen(false)}
+          />
+          
+          {/* Menu Panel */}
+          <div className="md:hidden fixed inset-y-0 left-0 w-72 bg-white dark:bg-gray-900 z-50 shadow-xl safe-area-inset-top safe-area-inset-bottom overflow-y-auto">
+            <div className="p-4">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="w-6 h-6 text-accent" />
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Cosmic Todo</h2>
+                </div>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  aria-label="Close menu"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Changed: Show user menu if authenticated, auth buttons with demo copy if not */}
               {isAuthenticated ? (
                 <div className="mb-4 -mx-3">
                   <UserMenu />
                 </div>
               ) : (
                 <div className="mb-4">
-                  {/* Changed: Added demo experience notice for mobile */}
+                  {/* Changed: Added demo experience notice */}
                   <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                     <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
                       👋 You&apos;re viewing the <strong>public demo</strong>. Sign up to create your own private Cosmic todo experience!
@@ -169,7 +237,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                   <div className="space-y-2">
                     <Link
                       href="/login"
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => setIsMenuOpen(false)}
                       className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium transition-colors"
                     >
                       <LogIn className="w-4 h-4" />
@@ -177,7 +245,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                     </Link>
                     <Link
                       href="/signup"
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => setIsMenuOpen(false)}
                       className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
                     >
                       <SignupIcon className="w-4 h-4" />
@@ -187,20 +255,20 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                 </div>
               )}
 
+              {/* Navigation */}
               <nav className="space-y-1">
                 <button
                   onClick={(e) => handleListNavigation(e, undefined)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                    !currentList
+                    !currentListSlug
                       ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                 >
-                  {/* Changed: Use Inbox icon instead of ListTodo */}
                   <Inbox className="w-5 h-5" />
                   <span className="font-medium">All Tasks</span>
                 </button>
-                
+
                 {isLoading ? (
                   <div className="pt-4">
                     <div className="pb-2 px-3">
@@ -230,7 +298,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                               isSyncing
                                 ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
-                                : currentList?.slug === list.slug
+                                : currentListSlug === list.slug
                                   ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
                                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                             }`}
@@ -259,7 +327,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                             {!isSyncing && (
                               <button
                                 onClick={(e) => toggleMenu(e, list.id)}
-                                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
                                 aria-label="List options"
                               >
                                 <MoreHorizontal className="w-4 h-4" />
@@ -273,7 +341,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                               ref={menuRef}
                               className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
                             >
-                              {/* Changed: Added invite button - only show if authenticated */}
+                              {/* Changed: Only show invite if authenticated */}
                               {isAuthenticated && (
                                 <button
                                   onClick={(e) => handleInviteClick(e, list)}
@@ -305,18 +373,22 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
                   </>
                 )}
 
+                {/* Changed: Always show create list form (works in demo mode) */}
                 <div className="pt-4">
                   <CreateListForm 
                     onListCreated={handleListCreated}
                     onListReplaced={handleListReplaced}
+                    onCreatingStateChange={handleCreatingStateChange}
+                    onNavigateToList={handleNavigateToList}
                   />
                 </div>
               </nav>
             </div>
           </div>
-        </div>
+        </>
       )}
 
+      {/* Edit List Modal */}
       {editingList && (
         <EditListModal
           list={editingList}
@@ -327,7 +399,7 @@ export default function MobileHeader({ lists, currentList, isLoading = false, sy
         />
       )}
 
-      {/* Changed: Added InviteModal - only show if authenticated */}
+      {/* Changed: Only show invite modal if authenticated */}
       {invitingList && isAuthenticated && (
         <InviteModal
           listId={invitingList.id}

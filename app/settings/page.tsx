@@ -186,10 +186,11 @@ export default function SettingsPage() {
     { key: 'mint', label: 'Mint', color: 'bg-emerald-400', darkColor: 'bg-emerald-500' },
   ]
 
+  // Changed: Settings page needs its own scrollable container since body has overflow hidden
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black">
+    <div className="fixed inset-0 bg-gray-50 dark:bg-black overflow-y-auto">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+      <header className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-4">
           <Link 
             href="/"
@@ -204,7 +205,7 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-2xl mx-auto px-4 py-8 pb-16 space-y-6">
         {/* Profile Section */}
         <section className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6">
           <div className="flex items-center gap-3 mb-6">
