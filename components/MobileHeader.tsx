@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { List } from '@/types'
-import { CheckSquare, Menu, X, MoreHorizontal, Pencil, Trash2, UserPlus, Inbox, LogIn, UserPlus as SignupIcon, Loader2 } from 'lucide-react'
+import { CheckSquare, Menu, X, MoreHorizontal, Pencil, Trash2, UserPlus, Inbox, LogIn, UserPlus as SignupIcon, Loader2, Plus } from 'lucide-react'
 // Changed: Removed Settings import as we're removing the settings button from mobile header
-import CreateListForm from './CreateListForm'
+import CreateListModal from './CreateListModal'
 import EditListModal from './EditListModal'
 import SkeletonLoader from './SkeletonLoader'
 import UserMenu from './UserMenu'
@@ -44,6 +44,7 @@ export default function MobileHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [editingList, setEditingList] = useState<List | null>(null)
   const [invitingList, setInvitingList] = useState<List | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { isAuthenticated } = useAuth()
@@ -219,38 +220,29 @@ export default function MobileHeader({
                 </button>
               </div>
 
-              {/* Changed: Show user menu if authenticated, auth buttons with demo copy if not */}
+              {/* Show user menu if authenticated, auth buttons if not */}
               {isAuthenticated ? (
                 <div className="mb-4 -mx-3">
                   <UserMenu />
                 </div>
               ) : (
-                <div className="mb-4">
-                  {/* Changed: Added demo experience notice - increased text size */}
-                  <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
-                      👋 You&apos;re viewing the <strong>public demo</strong>. Sign up to create your own private Cosmic todo experience!
-                    </p>
-                  </div>
-                  {/* Changed: Increased button padding and text size */}
-                  <div className="space-y-2">
-                    <Link
-                      href="/login"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium text-base transition-colors"
-                    >
-                      <LogIn className="w-5 h-5" />
-                      Log In
-                    </Link>
-                    <Link
-                      href="/signup"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-base transition-colors"
-                    >
-                      <SignupIcon className="w-5 h-5" />
-                      Sign Up
-                    </Link>
-                  </div>
+                <div className="mb-4 space-y-2">
+                  <Link
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-medium text-base transition-colors"
+                  >
+                    <LogIn className="w-5 h-5" />
+                    Log In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-3 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium text-base transition-colors"
+                  >
+                    <SignupIcon className="w-5 h-5" />
+                    Sign Up
+                  </Link>
                 </div>
               )}
 
@@ -381,19 +373,31 @@ export default function MobileHeader({
                   </>
                 )}
 
-                {/* Changed: Always show create list form (works in demo mode) */}
+                {/* Changed: Create list button that opens modal */}
                 <div className="pt-4">
-                  <CreateListForm 
-                    onListCreated={handleListCreated}
-                    onListReplaced={handleListReplaced}
-                    onCreatingStateChange={handleCreatingStateChange}
-                    onNavigateToList={handleNavigateToList}
-                  />
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="w-full flex items-center gap-3 px-3 py-3 text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-6 h-6" />
+                    <span className="font-medium">Create List</span>
+                  </button>
                 </div>
               </nav>
             </div>
           </div>
         </>
+      )}
+
+      {/* Create List Modal */}
+      {showCreateModal && (
+        <CreateListModal
+          onClose={() => setShowCreateModal(false)}
+          onListCreated={handleListCreated}
+          onListReplaced={handleListReplaced}
+          onCreatingStateChange={handleCreatingStateChange}
+          onNavigateToList={handleNavigateToList}
+        />
       )}
 
       {/* Edit List Modal */}
