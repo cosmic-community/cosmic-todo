@@ -7,11 +7,9 @@
     @apply border-gray-700;
   }
   
-  /* Changed: Added html background color for dark mode to prevent white flash when scrolling */
-  /* Changed: Added overflow-hidden to prevent excessive scrolling on the page */
+  /* Changed: Fixed html/body styles to prevent excessive scrolling while allowing content scroll */
   html {
     @apply bg-gray-50 transition-colors duration-200;
-    overflow: hidden;
     height: 100%;
   }
   
@@ -19,7 +17,7 @@
     @apply bg-black;
   }
   
-  /* Changed: Added height and overflow constraints to body to prevent excessive scrolling */
+  /* Changed: Body should fill viewport but not cause extra scrolling */
   body {
     @apply bg-gray-50 text-gray-900 antialiased transition-colors duration-200;
     height: 100%;
