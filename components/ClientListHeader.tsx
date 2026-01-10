@@ -10,10 +10,13 @@ interface ClientListHeaderProps {
 
 export default function ClientListHeader({ listSlug, refreshKey }: ClientListHeaderProps) {
   const [list, setList] = useState<List | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Changed: Start with isLoading false to prevent skeleton on navigation
+  const [isLoading, setIsLoading] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
   const maxRetries = 10
   const isFetchingRef = useRef(false)
+  // Changed: Track if this is the initial mount
+  const isInitialMountRef = useRef(true)
 
   const fetchList = useCallback(async (): Promise<List | null> => {
     try {
@@ -45,7 +48,10 @@ export default function ClientListHeader({ listSlug, refreshKey }: ClientListHea
 
     const loadData = async () => {
       isFetchingRef.current = true
-      setIsLoading(true)
+      // Changed: Only show loading on initial mount, not on list changes
+      if (isInitialMountRef.current) {
+        setIsLoading(true)
+      }
       
       const foundList = await fetchList()
       
@@ -64,6 +70,7 @@ export default function ClientListHeader({ listSlug, refreshKey }: ClientListHea
       }
       
       setIsLoading(false)
+      isInitialMountRef.current = false
       isFetchingRef.current = false
     }
 
@@ -94,13 +101,19 @@ export default function ClientListHeader({ listSlug, refreshKey }: ClientListHea
     }
   }, [refreshKey, fetchList])
 
-  if (isLoading || !list) {
+  // Changed: Only show loading on initial mount with retry logic
+  if (isLoading && isInitialMountRef.current && !list) {
     return (
       <div className="mb-6">
         <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse mb-2" />
         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 animate-pulse" />
       </div>
     )
+  }
+
+  // Changed: If no list yet but not initial mount, show nothing (content will load silently)
+  if (!list) {
+    return null
   }
 
   return (
