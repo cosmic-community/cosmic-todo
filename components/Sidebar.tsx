@@ -34,7 +34,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const { isAuthenticated } = useAuth()
-  
+
   // Changed: Get bucket slug from environment for Cosmic button
   const bucketSlug = process.env.NEXT_PUBLIC_COSMIC_BUCKET_SLUG || 'cosmic-todo'
 
@@ -199,8 +199,8 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
             <button
               onClick={(e) => handleListNavigation(e, undefined)}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${!currentListSlug
-                  ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
             >
               {/* Changed: Use Inbox icon instead of ListTodo */}
@@ -243,10 +243,10 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                           }
                         }}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isSyncing
-                            ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
-                            : currentListSlug === list.slug
-                              ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
+                          ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
+                          : currentListSlug === list.slug
+                            ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
                           }`}
                       >
                         {/* Changed: Show spinner if syncing, otherwise show color dot */}
@@ -331,7 +331,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
             </div>
           </nav>
         </div>
-        
+
         {/* Changed: Added Built with Cosmic button at bottom of sidebar */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-800">
           <a
@@ -340,9 +340,9 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
           >
-            <img 
-              src="https://cdn.cosmicjs.com/b67de7d0-c810-11ed-b01d-23d7b265c299-logo508x500.svg" 
-              alt="Cosmic Logo" 
+            <img
+              src="https://cdn.cosmicjs.com/b67de7d0-c810-11ed-b01d-23d7b265c299-logo508x500.svg"
+              alt="Cosmic Logo"
               className="w-4 h-4"
             />
             Built with Cosmic
