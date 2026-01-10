@@ -47,6 +47,13 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
     }
   }, [currentListSlug])
 
+  // Changed: Callback to scroll to top - used after adding tasks to fix mobile scroll issues
+  const scrollToTop = useCallback(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+  }, [])
+
   // Changed: Callback to handle list selection without reloading page
   const handleListChange = useCallback((newSlug?: string) => {
     setCurrentListSlug(newSlug)
@@ -92,7 +99,7 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
             ) : currentListSlug ? (
               <>
                 <ClientListHeader listSlug={currentListSlug} refreshKey={refreshKey} />
-                <ClientTaskList listSlug={currentListSlug} refreshKey={refreshKey} />
+                <ClientTaskList listSlug={currentListSlug} refreshKey={refreshKey} onScrollToTop={scrollToTop} />
               </>
             ) : (
               // Changed: Show All Tasks when no list is selected
@@ -100,7 +107,7 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                   All Tasks
                 </h1>
-                <ClientTaskList refreshKey={refreshKey} />
+                <ClientTaskList refreshKey={refreshKey} onScrollToTop={scrollToTop} />
               </>
             )}
           </div>

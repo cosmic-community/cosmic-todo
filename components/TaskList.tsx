@@ -13,6 +13,7 @@ interface TaskListProps {
   initialTasks: Task[]
   lists: List[]
   listSlug?: string
+  onScrollToTop?: () => void
 }
 
 // Track pending state changes for a task
@@ -21,7 +22,7 @@ interface PendingTaskState {
   // Add other fields here as needed for other optimistic updates
 }
 
-export default function TaskList({ initialTasks, lists, listSlug }: TaskListProps) {
+export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false)
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const mountedRef = useRef(true)
@@ -174,9 +175,16 @@ export default function TaskList({ initialTasks, lists, listSlug }: TaskListProp
   }, [])
 
   // Handlers for optimistic updates
+  // Changed: Scroll to top after adding task to fix mobile scroll issues
   const handleOptimisticAdd = useCallback((task: Task) => {
     setTasks(prev => deduplicateTasks([task, ...prev]))
-  }, [deduplicateTasks])
+    // Scroll to top after a brief delay to ensure the task is rendered
+    if (onScrollToTop) {
+      setTimeout(() => {
+        onScrollToTop()
+      }, 50)
+    }
+  }, [deduplicateTasks, onScrollToTop])
 
   // Changed: Toggle handler - add to celebrating set when completing
   const handleOptimisticToggle = useCallback((taskId: string) => {
