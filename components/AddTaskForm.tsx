@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Task, List } from '@/types'
 import { Plus } from 'lucide-react'
 
@@ -27,11 +27,12 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
     const taskTitle = title.trim()
     setTitle('')
 
-    // Create optimistic task
+    // Changed: Create optimistic task with all required properties including 'type'
     const optimisticTask: Task = {
       id: `temp-${Date.now()}`,
       title: taskTitle,
       slug: taskTitle.toLowerCase().replace(/\s+/g, '-'),
+      type: 'tasks', // Changed: Added required 'type' property
       created_at: new Date().toISOString(),
       metadata: {
         title: taskTitle,
