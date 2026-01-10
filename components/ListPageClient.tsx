@@ -6,18 +6,33 @@ import ClientSidebar from '@/components/ClientSidebar'
 import ClientMobileHeader from '@/components/ClientMobileHeader'
 import ClientListHeader from '@/components/ClientListHeader'
 import SkeletonLoader from '@/components/SkeletonLoader'
+import { useRouter } from 'next/navigation'
 
 interface ListPageClientProps {
   slug: string
 }
 
 export default function ListPageClient({ slug }: ListPageClientProps) {
+  const router = useRouter()
+  // Changed: Track current list slug for client-side navigation without sidebar reload
+  const [currentListSlug, setCurrentListSlug] = useState<string | undefined>(slug)
   // Changed: Track when a list is being created to show loading state
   const [isCreatingList, setIsCreatingList] = useState(false)
   // Changed: Track refresh key to trigger list area refresh when list is updated
   const [refreshKey, setRefreshKey] = useState(0)
   // Changed: Track if list is being updated to show loading state
   const [isUpdatingList, setIsUpdatingList] = useState(false)
+
+  // Changed: Callback to handle list selection without reloading sidebar
+  const handleListChange = useCallback((newSlug?: string) => {
+    setCurrentListSlug(newSlug)
+    // Changed: Update URL without causing page reload
+    if (newSlug) {
+      router.replace(`/lists/${newSlug}`, { scroll: false })
+    } else {
+      router.replace('/', { scroll: false })
+    }
+  }, [router])
 
   // Changed: Callback to trigger refresh of main list area
   const handleListRefresh = useCallback(() => {
@@ -30,12 +45,17 @@ export default function ListPageClient({ slug }: ListPageClientProps) {
   return (
     // Changed: Use h-screen with flex layout and overflow-hidden to prevent excessive scrolling
     <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
-      {/* Mobile Header */}
-      <ClientMobileHeader currentListSlug={slug} onListRefresh={handleListRefresh} />
+      {/* Mobile Header - Changed: Pass handlers for client-side navigation */}
+      <ClientMobileHeader 
+        currentListSlug={currentListSlug}
+        onListChange={handleListChange}
+        onListRefresh={handleListRefresh}
+      />
       
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar - Changed: Pass onListChange to prevent sidebar reload */}
       <ClientSidebar 
-        currentListSlug={slug} 
+        currentListSlug={currentListSlug}
+        onListChange={handleListChange}
         onCreatingStateChange={setIsCreatingList}
         onListRefresh={handleListRefresh}
       />
@@ -55,10 +75,18 @@ export default function ListPageClient({ slug }: ListPageClientProps) {
                   <SkeletonLoader variant="task" count={3} />
                 </div>
               </>
-            ) : (
+            ) : currentListSlug ? (
               <>
-                <ClientListHeader listSlug={slug} refreshKey={refreshKey} />
-                <ClientTaskList listSlug={slug} refreshKey={refreshKey} />
+                <ClientListHeader listSlug={currentListSlug} refreshKey={refreshKey} />
+                <ClientTaskList listSlug={currentListSlug} refreshKey={refreshKey} />
+              </>
+            ) : (
+              // Changed: Show All Tasks when no list is selected
+              <>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                  All Tasks
+                </h1>
+                <ClientTaskList refreshKey={refreshKey} />
               </>
             )}
           </div>

@@ -1,72 +1,103 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { List } from '@/types'
-import SkeletonLoader from './SkeletonLoader'
 
 interface ClientListHeaderProps {
   listSlug: string
-  refreshKey?: number // Changed: Added refreshKey prop to trigger refresh from parent
+  refreshKey?: number
 }
 
 export default function ClientListHeader({ listSlug, refreshKey }: ClientListHeaderProps) {
   const [list, setList] = useState<List | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  // Changed: Track retry attempts for newly created lists
   const [retryCount, setRetryCount] = useState(0)
-  const maxRetries = 10 // Max retries over ~5 seconds
+  const maxRetries = 10
+  const isFetchingRef = useRef(false)
+
+  const fetchList = useCallback(async (): Promise<List | null> => {
+    try {
+      // Changed: Add cache-busting timestamp to prevent stale data
+      const response = await fetch(`/api/lists?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch lists')
+      }
+      
+      const data = await response.json()
+      const foundList = data.lists.find((l: List) => l.slug === listSlug)
+      return foundList || null
+    } catch (error) {
+      console.error('Error fetching list:', error)
+      return null
+    }
+  }, [listSlug])
 
   useEffect(() => {
-    const fetchList = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        const response = await fetch('/api/lists')
-        if (!response.ok) {
-          throw new Error('Failed to fetch lists')
-        }
-        
-        const data = await response.json()
-        const foundList = data.lists.find((l: List) => l.slug === listSlug)
-        
-        if (foundList) {
-          setList(foundList)
-          setRetryCount(0) // Reset retry count on success
-        } else {
-          // Changed: If list not found, it might still be creating - retry
-          if (retryCount < maxRetries) {
-            // Wait 500ms before retrying
-            setTimeout(() => {
-              setRetryCount(prev => prev + 1)
-            }, 500)
-          } else {
-            setError('List not found')
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching list:', err)
-        setError('Failed to load list')
-      } finally {
-        setIsLoading(false)
-      }
+    if (isFetchingRef.current) {
+      return
     }
 
-    fetchList()
-  }, [listSlug, retryCount, refreshKey]) // Changed: Added refreshKey to dependencies
+    const loadData = async () => {
+      isFetchingRef.current = true
+      setIsLoading(true)
+      
+      const foundList = await fetchList()
+      
+      if (!foundList) {
+        // List not found - might still be creating
+        if (retryCount < maxRetries) {
+          isFetchingRef.current = false
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1)
+          }, 500)
+          return // Don't set isLoading to false yet
+        }
+      } else {
+        setList(foundList)
+        setRetryCount(0)
+      }
+      
+      setIsLoading(false)
+      isFetchingRef.current = false
+    }
 
-  // Changed: Show loading state while retrying
-  if (isLoading || (retryCount > 0 && retryCount < maxRetries && !list)) {
-    return <SkeletonLoader variant="header" />
-  }
+    loadData()
+  }, [listSlug, retryCount, fetchList])
 
-  if (error || !list) {
+  // Changed: Reset state when listSlug changes
+  useEffect(() => {
+    setList(null)
+    setRetryCount(0)
+    isFetchingRef.current = false
+  }, [listSlug])
+
+  // Changed: Refresh when refreshKey changes
+  useEffect(() => {
+    if (refreshKey !== undefined && refreshKey > 0) {
+      isFetchingRef.current = false
+      setRetryCount(prev => prev) // Trigger re-fetch
+      
+      const refreshData = async () => {
+        const foundList = await fetchList()
+        if (foundList) {
+          setList(foundList)
+        }
+      }
+      
+      refreshData()
+    }
+  }, [refreshKey, fetchList])
+
+  if (isLoading || !list) {
     return (
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {error || 'List not found'}
-        </h1>
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse" />
       </div>
     )
   }
@@ -79,14 +110,9 @@ export default function ClientListHeader({ listSlug, refreshKey }: ClientListHea
           style={{ backgroundColor: list.metadata.color || '#3b82f6' }}
         />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {list.metadata.name || list.title}
+          {list.metadata.name}
         </h1>
       </div>
-      {list.metadata.description && (
-        <p className="text-gray-600 dark:text-gray-400 mt-1 ml-7">
-          {list.metadata.description}
-        </p>
-      )}
     </div>
   )
 }
