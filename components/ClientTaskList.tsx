@@ -17,7 +17,8 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
   const [tasks, setTasks] = useState<Task[]>([])
   const [lists, setLists] = useState<List[]>([])
   const [list, setList] = useState<List | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Changed: Start with isLoading false to prevent skeleton on navigation
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [listRetryCount, setListRetryCount] = useState(0)
   const maxRetries = 10
@@ -32,6 +33,8 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
   const isMountedRef = useRef(true)
   // Changed: Track last fetch timestamp to detect changes
   const lastTasksHashRef = useRef<string>('')
+  // Changed: Track if this is the initial mount
+  const isInitialMountRef = useRef(true)
 
   // Changed: Generate a simple hash of tasks for change detection
   const generateTasksHash = useCallback((taskList: Task[]): string => {
@@ -170,7 +173,10 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
     
     const loadData = async () => {
       isFetchingRef.current = true
-      setIsLoading(true)
+      // Changed: Only show loading on initial mount, not on list changes
+      if (isInitialMountRef.current) {
+        setIsLoading(true)
+      }
       setError(null)
       
       const { found, foundList } = await fetchLists()
@@ -212,6 +218,7 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
       
       if (isMountedRef.current) {
         setIsLoading(false)
+        isInitialMountRef.current = false
       }
       isFetchingRef.current = false
       
@@ -243,7 +250,6 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
       
       // Force a new fetch
       const refreshData = async () => {
-        setIsLoading(true)
         const { found, foundList } = await fetchLists()
         
         if (foundList) {
@@ -252,10 +258,6 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
           await fetchTasksForList(foundList.id)
         } else if (!listSlug) {
           await fetchTasksForList(null)
-        }
-        
-        if (isMountedRef.current) {
-          setIsLoading(false)
         }
       }
       
@@ -294,13 +296,9 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
     }
   }, [stopPolling, startPolling, pollForUpdates])
 
-  // Changed: Show loading while list is being found (for newly created lists)
-  if (isLoading || (listSlug && !list && listRetryCount > 0 && listRetryCount < maxRetries)) {
-    return (
-      <div className="space-y-3">
-        <SkeletonLoader variant="task" count={3} />
-      </div>
-    )
+  // Changed: Only show loading on initial mount with retry logic
+  if (isLoading && isInitialMountRef.current && (listSlug && !list && listRetryCount > 0 && listRetryCount < maxRetries)) {
+    return <SkeletonLoader variant="task" count={3} />
   }
 
   if (error) {
