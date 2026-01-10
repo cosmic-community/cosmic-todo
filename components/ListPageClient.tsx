@@ -73,9 +73,9 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
       />
       
       {/* Changed: Main Content - flex-1 with overflow-y-auto for internal scrolling only */}
-      <main className="flex-1 pt-16 md:pt-0 flex flex-col min-h-0">
+      <main className="flex-1 pt-20 md:pt-0 flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-32">
+          <div className="max-w-2xl mx-auto px-4 pt-4 pb-32 md:py-8">
             {/* Changed: Show creating list loading state when a list is being created */}
             {isCreatingList ? (
               <SkeletonLoader variant="creating-list" />

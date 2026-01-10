@@ -158,10 +158,6 @@ export default function MobileHeader({
     }
   }
 
-  // Get current list title
-  const currentList = lists.find(l => l.slug === currentListSlug)
-  const headerTitle = currentList?.metadata.name || 'All Tasks'
-
   return (
     <>
       {/* Changed: Fixed Mobile Header - increased sizes for better mobile readability */}
@@ -179,9 +175,9 @@ export default function MobileHeader({
           <div className="flex items-center gap-2">
             {/* Changed: Increased icon size from w-5 h-5 to w-6 h-6 */}
             <CheckSquare className="w-6 h-6 text-accent" />
-            {/* Changed: Increased font size and max-width for title */}
-            <span className="font-semibold text-lg text-gray-900 dark:text-white truncate max-w-[180px]">
-              {headerTitle}
+            {/* Changed: Always show "Cosmic Todo" as the mobile header title */}
+            <span className="font-semibold text-lg text-gray-900 dark:text-white">
+              Cosmic Todo
             </span>
           </div>
           
