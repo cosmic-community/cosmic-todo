@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Task, List } from '@/types'
 import { Plus } from 'lucide-react'
 
@@ -13,7 +13,16 @@ interface AddTaskFormProps {
 export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTaskFormProps) {
   const [title, setTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [shouldFocus, setShouldFocus] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Focus input when shouldFocus becomes true (after task submission)
+  useEffect(() => {
+    if (shouldFocus && !isSubmitting) {
+      inputRef.current?.focus()
+      setShouldFocus(false)
+    }
+  }, [shouldFocus, isSubmitting])
 
   // Get current list ID from slug
   const currentList = listSlug ? lists.find(l => l.slug === listSlug) : null
@@ -62,6 +71,7 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
       // Note: We could revert the optimistic add here if needed
     } finally {
       setIsSubmitting(false)
+      setShouldFocus(true)
     }
   }
 

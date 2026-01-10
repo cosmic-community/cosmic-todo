@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import CosmicBadge from '@/components/CosmicBadge'
 import ThemeProvider from '@/components/ThemeProvider'
 import { AuthProvider } from '@/contexts/AuthContext'
 import ThemeSyncWrapper from '@/components/ThemeSyncWrapper'
@@ -81,7 +80,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   const bucketSlug = process.env.COSMIC_BUCKET_SLUG as string
-  
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -99,7 +98,6 @@ export default function RootLayout({
             <ThemeSyncWrapper>
               {children}
             </ThemeSyncWrapper>
-            <CosmicBadge bucketSlug={bucketSlug} />
             {/* Changed: Added PWA install prompt component */}
             <PWAInstallPrompt />
             {/* Changed: Added service worker registration */}

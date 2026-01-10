@@ -66,21 +66,18 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
       color: formData.color
     }
     
-    // Optimistically update and close immediately
-    onOptimisticUpdate(list.id, optimisticUpdates)
-    onClose()
-    
-    // Send to server in background
     try {
       await fetch(`/api/lists/${list.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       })
-      // Changed: Trigger refresh after successful update
+      // Update UI and close modal after successful save
+      onOptimisticUpdate(list.id, optimisticUpdates)
       if (onRefresh) {
         onRefresh()
       }
+      onClose()
     } catch (error) {
       console.error('Error updating list:', error)
     } finally {
