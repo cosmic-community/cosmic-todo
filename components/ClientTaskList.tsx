@@ -8,12 +8,14 @@ import SkeletonLoader from './SkeletonLoader'
 interface ClientTaskListProps {
   listSlug?: string
   refreshKey?: number
+  onScrollToTop?: () => void
+  onOpenMenu?: () => void
 }
 
 // Changed: Polling interval for real-time updates (5 seconds)
 const POLLING_INTERVAL = 5000
 
-export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListProps) {
+export default function ClientTaskList({ listSlug, refreshKey, onScrollToTop, onOpenMenu }: ClientTaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([])
   const [lists, setLists] = useState<List[]>([])
   const [list, setList] = useState<List | null>(null)
@@ -316,6 +318,8 @@ export default function ClientTaskList({ listSlug, refreshKey }: ClientTaskListP
         initialTasks={tasks}
         lists={lists}
         listSlug={listSlug}
+        onScrollToTop={onScrollToTop}
+        onOpenMenu={onOpenMenu}
       />
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Task, List } from '@/types'
 import { Plus } from 'lucide-react'
 
@@ -13,7 +13,17 @@ interface AddTaskFormProps {
 export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTaskFormProps) {
   const [title, setTitle] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [shouldFocus, setShouldFocus] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Focus input when shouldFocus becomes true (after task submission)
+  // Changed: Use preventScroll to avoid iOS scrolling the page when focusing
+  useEffect(() => {
+    if (shouldFocus && !isSubmitting) {
+      inputRef.current?.focus({ preventScroll: true })
+      setShouldFocus(false)
+    }
+  }, [shouldFocus, isSubmitting])
 
   // Get current list ID from slug
   const currentList = listSlug ? lists.find(l => l.slug === listSlug) : null
@@ -62,6 +72,7 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
       // Note: We could revert the optimistic add here if needed
     } finally {
       setIsSubmitting(false)
+      setShouldFocus(true)
     }
   }
 
@@ -74,14 +85,14 @@ export default function AddTaskForm({ lists, listSlug, onOptimisticAdd }: AddTas
         </div>
       </div>
       
-      {/* Changed: Increased text size and padding for mobile */}
+      {/* Changed: Increased text size and padding for mobile, min-w-0 allows shrinking */}
       <input
         ref={inputRef}
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Add a Task"
-        className="flex-1 bg-transparent border-none outline-none text-lg md:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 py-2"
+        className="flex-1 min-w-0 bg-transparent border-none outline-none text-lg md:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 py-2"
         disabled={isSubmitting}
       />
       

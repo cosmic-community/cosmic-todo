@@ -254,6 +254,18 @@
     padding-top: max(0px, env(safe-area-inset-top));
   }
   
+  /* Changed: Safe area top padding with minimum fallback - ensures content doesn't overlap status bar */
+  .pt-safe-top {
+    /* Use max() to ensure at least 2.75rem (44px) padding on mobile, or safe area if larger */
+    padding-top: max(2.75rem, env(safe-area-inset-top));
+  }
+  
+  @media (min-width: 768px) {
+    .pt-safe-top {
+      padding-top: 0;
+    }
+  }
+  
   .safe-area-inset-bottom {
     padding-bottom: max(0px, env(safe-area-inset-bottom));
   }
@@ -264,5 +276,18 @@
   
   .safe-area-inset-right {
     padding-right: max(0px, env(safe-area-inset-right));
+  }
+}
+
+/* Fallback for browsers that don't support env() - still apply minimum padding on mobile */
+@supports not (padding: env(safe-area-inset-top)) {
+  .pt-safe-top {
+    padding-top: 2.75rem;
+  }
+  
+  @media (min-width: 768px) {
+    .pt-safe-top {
+      padding-top: 0;
+    }
   }
 }

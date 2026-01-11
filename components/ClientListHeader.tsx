@@ -102,11 +102,15 @@ export default function ClientListHeader({ listSlug, refreshKey }: ClientListHea
   }, [refreshKey, fetchList])
 
   // Changed: Only show loading on initial mount with retry logic
+  // Changed: Only show title skeleton (no description) to prevent layout shift
+  // when loading lists without descriptions - growing is less jarring than shrinking
   if (isLoading && isInitialMountRef.current && !list) {
     return (
       <div className="mb-6">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse mb-2" />
-        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-64 animate-pulse" />
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse flex-shrink-0" />
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse" />
+        </div>
       </div>
     )
   }
