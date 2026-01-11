@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import { List } from '@/types'
 import { CheckSquare, Menu, X, MoreHorizontal, Pencil, Trash2, UserPlus, Inbox, LogIn, UserPlus as SignupIcon, Loader2, Plus } from 'lucide-react'
 import CreateListModal from './CreateListModal'
@@ -182,22 +181,20 @@ export default function MobileHeader({
               </div>
             ) : (
               <div className="mb-6 space-y-3">
-                <Link
+                <a
                   href="/login"
-                  onClick={() => closeMenu()}
                   className="flex items-center justify-center gap-2 w-full px-4 py-4 bg-accent hover:bg-accent-hover text-white rounded-xl font-medium text-lg transition-colors"
                 >
                   <LogIn className="w-5 h-5" />
                   Log In
-                </Link>
-                <Link
+                </a>
+                <a
                   href="/signup"
-                  onClick={() => closeMenu()}
                   className="flex items-center justify-center gap-2 w-full px-4 py-4 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl font-medium text-lg transition-colors"
                 >
                   <SignupIcon className="w-5 h-5" />
                   Sign Up
-                </Link>
+                </a>
               </div>
             )}
 
