@@ -325,15 +325,17 @@ export default function MobileHeader({
             </nav>
           </div>
 
-          {/* Changed: Close button fixed at bottom right for easy thumb access */}
-          <div className="fixed bottom-6 right-4 safe-area-inset-bottom">
-            <button
-              onClick={() => closeMenu()}
-              className="w-14 h-14 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full shadow-lg flex items-center justify-center transition-all active:scale-95"
-              aria-label="Close menu"
-            >
-              <X className="w-6 h-6" />
-            </button>
+          {/* Changed: Close button fixed at bottom right - matches hamburger menu button exactly */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-5 safe-area-inset-bottom">
+            <div className="max-w-2xl mx-auto flex justify-end">
+              <button
+                onClick={() => closeMenu()}
+                className="flex-shrink-0 p-3 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
           </div>
         </div>
       )}
