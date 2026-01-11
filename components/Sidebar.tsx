@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { List } from '@/types'
 import { CheckSquare, Inbox, MoreHorizontal, Pencil, Trash2, UserPlus, LogIn, UserPlus as SignupIcon, Loader2, Plus } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
-// Changed: Removed ThemeToggle import
 import CreateListModal from './CreateListModal'
 import EditListModal from './EditListModal'
 import SkeletonLoader from './SkeletonLoader'
@@ -16,7 +15,6 @@ interface SidebarProps {
   lists: List[]
   currentListSlug?: string
   isLoading?: boolean
-  // Changed: Track lists that are still syncing (have temporary IDs)
   syncingListSlugs?: Set<string>
   onListCreated?: (list: List) => void
   onListReplaced?: (tempId: string, realList: List) => void
@@ -24,7 +22,6 @@ interface SidebarProps {
   onListDeleted?: (listId: string) => void
   onListClick?: (slug?: string) => void
   onRefresh?: () => void
-  // Changed: Add callback for creating state to show loading in main area
   onCreatingStateChange?: (isCreating: boolean) => void
 }
 
@@ -36,10 +33,8 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
   const menuRef = useRef<HTMLDivElement>(null)
   const { isAuthenticated } = useAuth()
 
-  // Changed: Get bucket slug from environment for Cosmic button
   const bucketSlug = process.env.NEXT_PUBLIC_COSMIC_BUCKET_SLUG || 'cosmic-todo'
 
-  // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -92,7 +87,6 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
     e.preventDefault()
     e.stopPropagation()
     setOpenMenuId(null)
-    // Changed: Only allow invite if authenticated
     if (isAuthenticated) {
       setInvitingList(list)
     }
@@ -104,7 +98,6 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
     setOpenMenuId(null)
     handleOptimisticDelete(listId)
 
-    // Send to server in background
     fetch(`/api/lists/${listId}`, {
       method: 'DELETE'
     }).catch(error => {
@@ -112,11 +105,9 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
     })
   }
 
-  // Changed: Handle list navigation - prevent click on syncing lists
   const handleListNavigation = (e: React.MouseEvent, slug?: string, isSyncing?: boolean) => {
     e.preventDefault()
 
-    // Changed: Don't allow navigation to syncing lists
     if (isSyncing) {
       return
     }
@@ -126,24 +117,21 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
     }
   }
 
-  // Changed: Handle navigation to newly created list
   const handleNavigateToList = (slug: string) => {
     if (onListClick) {
       onListClick(slug)
     }
   }
 
-  // Changed: Handle creating state change
   const handleCreatingStateChange = (isCreating: boolean) => {
     if (onCreatingStateChange) {
       onCreatingStateChange(isCreating)
     }
   }
 
-  // Changed: Handle clicking on Cosmic Todo title to navigate to All Tasks
   const handleTitleClick = () => {
     if (onListClick) {
-      onListClick(undefined) // undefined means "All Tasks" view
+      onListClick(undefined)
     }
   }
 
@@ -152,14 +140,11 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
       <aside className="hidden md:flex md:flex-col w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 overflow-y-auto">
         <div className="flex-1 p-6">
           <div className="flex items-center mb-6">
-            {/* Changed: Made title clickable to navigate to All Tasks */}
             <button
               onClick={handleTitleClick}
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
-              {/* Changed: Use accent color for logo */}
               <CheckSquare className="w-6 h-6 text-accent" />
-              {/* Changed: Made title clickable */}
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">Cosmic Todo</h2>
             </button>
           </div>
@@ -192,16 +177,14 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
             <button
               onClick={(e) => handleListNavigation(e, undefined)}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${!currentListSlug
-                  ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
             >
-              {/* Changed: Use Inbox icon instead of ListTodo */}
               <Inbox className="w-5 h-5" />
               <span className="font-medium">All Tasks</span>
             </button>
 
-            {/* Changed: Only show skeleton during initial load, not when switching lists */}
             {isLoading && lists.length === 0 ? (
               <div className="pt-4">
                 <div className="pb-2 px-3">
@@ -220,22 +203,27 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                 </div>
 
                 {lists.map((list) => {
-                  // Changed: Check if this list is still syncing (has temp ID)
                   const isSyncing = syncingListSlugs.has(list.slug)
 
                   return (
                     <div key={list.id} className="relative group">
-                      <button
+                      <div
+                        role="button"
+                        tabIndex={isSyncing ? -1 : 0}
                         onClick={(e) => handleListNavigation(e, list.slug, isSyncing)}
-                        disabled={isSyncing}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleListNavigation(e as unknown as React.MouseEvent, list.slug, isSyncing)
+                          }
+                        }}
                         className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isSyncing
-                            ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
-                            : currentListSlug === list.slug
-                              ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
-                              : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                          ? 'opacity-60 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50'
+                          : currentListSlug === list.slug
+                            ? 'bg-accent-light dark:bg-accent/20 text-accent dark:text-accent'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer'
                           }`}
                       >
-                        {/* Changed: Show spinner if syncing, otherwise show color dot */}
                         {isSyncing ? (
                           <Loader2 className="w-4 h-4 flex-shrink-0 animate-spin text-gray-400" />
                         ) : (
@@ -244,29 +232,27 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                             style={{ backgroundColor: list.metadata.color || '#3b82f6' }}
                           />
                         )}
-                        {/* Changed: Use metadata.name instead of title for list name display */}
                         <span className={`font-medium flex-1 truncate text-left pr-6 ${isSyncing ? 'text-gray-500 dark:text-gray-400' : ''}`}>
                           {list.metadata.name || list.title}
                         </span>
 
-                        {/* Changed: Show "Saving..." text if syncing */}
                         {isSyncing && (
                           <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0">
                             Saving...
                           </span>
                         )}
-                      </button>
 
-                      {/* Changed: Move options button outside main button to fix nested button hydration error */}
-                      {!isSyncing && (
-                        <button
-                          onClick={(e) => toggleMenu(e, list.id)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
-                          aria-label="List options"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
-                      )}
+                        {/* More options button - hide if syncing */}
+                        {!isSyncing && (
+                          <button
+                            onClick={(e) => toggleMenu(e, list.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity"
+                            aria-label="List options"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
 
                       {/* Dropdown menu - don't show for syncing lists */}
                       {openMenuId === list.id && !isSyncing && (
@@ -274,7 +260,6 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
                           ref={menuRef}
                           className="absolute right-0 top-full mt-1 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50"
                         >
-                          {/* Changed: Only show invite if authenticated */}
                           {isAuthenticated && (
                             <button
                               onClick={(e) => handleInviteClick(e, list)}
@@ -306,7 +291,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
               </>
             )}
 
-            {/* Changed: Create list button that opens modal */}
+            {/* Create list button that opens modal */}
             <div className="pt-4">
               <button
                 onClick={() => setShowCreateModal(true)}
@@ -319,7 +304,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
           </nav>
         </div>
 
-        {/* Changed: Added Built with Cosmic button at bottom of sidebar */}
+        {/* Built with Cosmic button at bottom of sidebar */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-800">
           <a
             href={`https://www.cosmicjs.com?utm_source=bucket_${bucketSlug}&utm_medium=referral&utm_campaign=app_badge&utm_content=built_with_cosmic`}
@@ -359,7 +344,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
         />
       )}
 
-      {/* Changed: Only show invite modal if authenticated */}
+      {/* Only show invite modal if authenticated */}
       {invitingList && isAuthenticated && (
         <InviteModal
           listId={invitingList.id}
