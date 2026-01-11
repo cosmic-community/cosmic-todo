@@ -95,8 +95,8 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
           onMenuOpenRegister={(fn) => setOpenMenuFn(() => fn)}
         />
         
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-4 pt-4 pb-32 md:py-8 safe-area-inset-top">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-safe-top">
+          <div className="max-w-2xl mx-auto px-4 pb-32 pt-4 md:py-8">
             {/* Changed: Show creating list loading state when a list is being created */}
             {isCreatingList ? (
               <SkeletonLoader variant="creating-list" />

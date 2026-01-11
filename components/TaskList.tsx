@@ -347,8 +347,8 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
         )}
         <div className="bg-gray-50 dark:bg-black border-t border-gray-200 dark:border-gray-800 p-5 md:p-4 safe-area-inset-bottom">
           <div className="max-w-2xl mx-auto flex items-center gap-3">
-            {/* Add Task Form - takes available space */}
-            <div className="flex-1">
+            {/* Add Task Form - takes available space, min-w-0 allows shrinking */}
+            <div className="flex-1 min-w-0">
               <AddTaskForm
                 lists={lists}
                 listSlug={listSlug}
@@ -356,7 +356,7 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
               />
             </div>
 
-            {/* Changed: Menu button - mobile only, secondary style with border */}
+            {/* Changed: Menu button - mobile only, secondary style with border, flex-shrink-0 keeps it fixed */}
             {onOpenMenu && (
               <button
                 onClick={onOpenMenu}
