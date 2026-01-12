@@ -144,8 +144,8 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
   // Changed: Helper function to check if current user is the owner of a list
   const isListOwner = (list: List): boolean => {
     if (!user) return false
-    const ownerId = typeof list.metadata.owner === 'string' 
-      ? list.metadata.owner 
+    const ownerId = typeof list.metadata.owner === 'string'
+      ? list.metadata.owner
       : list.metadata.owner?.id
     return ownerId === user.id
   }

@@ -95,7 +95,7 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onCr
   useEffect(() => {
     // Skip if auth is still loading
     if (isAuthLoading) return
-    
+
     // Check if auth state has changed
     if (prevAuthState.current !== null && prevAuthState.current !== isAuthenticated) {
       // Clear the cache and refetch lists
@@ -104,7 +104,7 @@ export default function ClientMobileHeader({ currentListSlug, onListChange, onCr
       setIsLoading(true)
       fetchLists()
     }
-    
+
     // Update previous auth state
     prevAuthState.current = isAuthenticated
   }, [isAuthenticated, isAuthLoading, fetchLists])
