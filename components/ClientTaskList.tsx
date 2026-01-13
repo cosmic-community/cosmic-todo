@@ -41,7 +41,7 @@ export default function ClientTaskList({ listSlug, refreshKey, onScrollToTop, on
   // Changed: Generate a simple hash of tasks for change detection
   const generateTasksHash = useCallback((taskList: Task[]): string => {
     return taskList
-      .map(t => `${t.id}:${t.metadata.completed}:${t.metadata.title}:${t.modified_at || ''}`)
+      .map(t => `${t.id}:${t.metadata.completed}:${t.metadata.title}:${t.metadata.order ?? ''}:${t.modified_at || ''}`)
       .sort()
       .join('|')
   }, [])

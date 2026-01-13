@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, forwardRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Task, List, StyleTheme } from '@/types'
-import { Trash2 } from 'lucide-react'
+import { Trash2, FileText, Flag, Calendar, GripVertical } from 'lucide-react'
 import EditTaskModal from '@/components/EditTaskModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/components/ThemeProvider'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface TaskCardProps {
   task: Task
@@ -17,6 +19,9 @@ interface TaskCardProps {
   onSyncComplete?: (taskId: string) => void
   // Changed: Added callback to notify parent when task should be removed after animation
   onAnimationComplete?: (taskId: string) => void
+  // Changed: Props for drag and drop
+  isDragging?: boolean
+  dragHandleProps?: Record<string, unknown>
 }
 
 // Changed: Simplified confetti particle without overflow issues
@@ -69,7 +74,9 @@ export default function TaskCard({
   onOptimisticDelete,
   onOptimisticUpdate,
   onSyncComplete,
-  onAnimationComplete
+  onAnimationComplete,
+  isDragging: isDraggingProp,
+  dragHandleProps
 }: TaskCardProps) {
   // Changed: Get checkbox position from user preferences
   const { user } = useAuth()
@@ -257,20 +264,54 @@ export default function TaskCard({
       {/* Changed: Simple render without collapse animation - task just disappears after confetti */}
       <div 
         ref={cardRef}
-        className="relative"
+        className={`relative ${isDraggingProp ? 'z-50' : ''}`}
       >
         {/* Changed: Removed overflow-hidden to allow confetti to be visible outside the card - increased padding for mobile */}
         <div className="relative">
           <div 
-            className="bg-white dark:bg-gray-900 rounded-xl px-4 py-4 md:py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800"
+            className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-4 md:py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800 group ${
+              isDraggingProp ? 'shadow-lg ring-2 ring-accent/50 opacity-90' : ''
+            }`}
             style={{
               // Changed: Reverse flex direction when checkbox is on right
               flexDirection: checkboxPosition === 'right' ? 'row-reverse' : 'row',
             }}
             onClick={handleCardClick}
           >
-            {/* Changed: Checkbox with confetti positioned around it - allow overflow */}
+            {/* Changed: Checkbox on the edge, icons next to it */}
             {CheckboxButton}
+            
+            {/* Task attribute indicators - flag always next to checkbox */}
+            <div className={`flex items-center gap-3 flex-shrink-0 ${checkboxPosition === 'right' ? 'flex-row-reverse' : ''}`}>
+              {/* Priority indicator - always next to checkbox, color coded */}
+              {task.metadata.priority && (
+                <span title={`Priority: ${task.metadata.priority.value}`}>
+                  <Flag className={`w-4 h-4 ${
+                    showCheckmark 
+                      ? 'text-gray-300 dark:text-gray-600' 
+                      : task.metadata.priority.key === 'high' 
+                        ? 'text-red-500 dark:text-red-400' 
+                        : task.metadata.priority.key === 'medium' 
+                          ? 'text-yellow-500 dark:text-yellow-400' 
+                          : 'text-blue-500 dark:text-blue-400'
+                  }`} />
+                </span>
+              )}
+              
+              {/* Description indicator */}
+              {task.metadata.description && (
+                <span title="Has description">
+                  <FileText className={`w-4 h-4 ${showCheckmark ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`} />
+                </span>
+              )}
+              
+              {/* Due date indicator */}
+              {task.metadata.due_date && (
+                <span title={`Due: ${new Date(task.metadata.due_date).toLocaleDateString()}`}>
+                  <Calendar className={`w-4 h-4 ${showCheckmark ? 'text-gray-300 dark:text-gray-600' : 'text-gray-400 dark:text-gray-500'}`} />
+                </span>
+              )}
+            </div>
             
             {/* Changed: Title - use showCheckmark for visual styling - increased text size on mobile */}
             <span className={`flex-1 text-lg md:text-base transition-all duration-300 ease-out ${
@@ -289,6 +330,19 @@ export default function TaskCard({
               >
                 <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
               </button>
+            )}
+            
+            {/* Drag handle - on opposite end of checkbox, always visible on mobile, hover on desktop */}
+            {dragHandleProps && !task.metadata.completed && (
+              <div
+                {...dragHandleProps}
+                className={`flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity touch-none ${
+                  isDraggingProp ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVertical className="w-5 h-5" />
+              </div>
             )}
           </div>
         </div>

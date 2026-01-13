@@ -3,10 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { List, User } from '@/types'
-import { X, Trash2, UserMinus } from 'lucide-react'
+import { X, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
 import ConfirmationModal from './ConfirmationModal'
+import InviteModal from './InviteModal'
 
 interface EditListModalProps {
   list: List
@@ -41,6 +42,8 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
   // Changed: Added state for user removal confirmation modal
   const [userToRemove, setUserToRemove] = useState<User | null>(null)
+  // Changed: Added state for invite modal
+  const [showInviteModal, setShowInviteModal] = useState(false)
   const modalRef = useRef<HTMLDivElement>(null)
   
   // Changed: Add escape key handler
@@ -270,35 +273,44 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
               </div>
             </div>
 
-            {/* Changed: Added shared users section with remove functionality */}
-            {sharedUsers.length > 0 && (
+            {/* Changed: Added shared users section with remove functionality and invite button */}
+            {ownerCanEdit && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Shared With
-                </label>
-                <div className="space-y-2">
-                  {sharedUsers.map((sharedUser) => (
-                    <div
-                      key={sharedUser.id}
-                      className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-sm font-medium text-accent">
-                          {getUserDisplayName(sharedUser).charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {getUserDisplayName(sharedUser)}
-                          </p>
-                          {sharedUser.metadata?.email && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {sharedUser.metadata.email}
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Shared With
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-sm text-accent hover:text-accent-dark transition-colors"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Invite
+                  </button>
+                </div>
+                {sharedUsers.length > 0 ? (
+                  <div className="space-y-2">
+                    {sharedUsers.map((sharedUser) => (
+                      <div
+                        key={sharedUser.id}
+                        className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-sm font-medium text-accent">
+                            {getUserDisplayName(sharedUser).charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              {getUserDisplayName(sharedUser)}
                             </p>
-                          )}
+                            {sharedUser.metadata?.email && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {sharedUser.metadata.email}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      {/* Changed: Only show remove button if current user is the owner */}
-                      {ownerCanEdit && (
                         <button
                           type="button"
                           onClick={() => handleRemoveUserClick(sharedUser)}
@@ -312,10 +324,14 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
                             <UserMinus className="w-4 h-4" />
                           )}
                         </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    This list is not shared with anyone yet.
+                  </p>
+                )}
               </div>
             )}
 
@@ -388,6 +404,15 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
           isLoading={removingUserId === userToRemove.id}
           onConfirm={handleConfirmRemoveUser}
           onCancel={() => setUserToRemove(null)}
+        />
+      )}
+
+      {/* Invite Modal */}
+      {showInviteModal && (
+        <InviteModal
+          listId={list.id}
+          listName={list.metadata.name}
+          onClose={() => setShowInviteModal(false)}
         />
       )}
     </div>

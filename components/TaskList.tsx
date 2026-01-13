@@ -8,6 +8,26 @@ import AddTaskForm from '@/components/AddTaskForm'
 import EmptyState from '@/components/EmptyState'
 import { ChevronRight, Menu } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface TaskListProps {
   initialTasks: Task[]
@@ -23,6 +43,58 @@ interface PendingTaskState {
   // Add other fields here as needed for other optimistic updates
 }
 
+// Sortable wrapper component for TaskCard
+interface SortableTaskCardProps {
+  task: Task
+  lists: List[]
+  onOptimisticToggle: (taskId: string) => void
+  onOptimisticDelete: (taskId: string) => void
+  onOptimisticUpdate: (taskId: string, updates: Partial<Task['metadata']>) => void
+  onSyncComplete: (taskId: string) => void
+  onAnimationComplete: (taskId: string) => void
+}
+
+function SortableTaskCard({
+  task,
+  lists,
+  onOptimisticToggle,
+  onOptimisticDelete,
+  onOptimisticUpdate,
+  onSyncComplete,
+  onAnimationComplete,
+}: SortableTaskCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <TaskCard
+        task={task}
+        lists={lists}
+        onOptimisticToggle={onOptimisticToggle}
+        onOptimisticDelete={onOptimisticDelete}
+        onOptimisticUpdate={onOptimisticUpdate}
+        onSyncComplete={onSyncComplete}
+        onAnimationComplete={onAnimationComplete}
+        isDragging={isDragging}
+        dragHandleProps={listeners}
+      />
+    </div>
+  )
+}
+
 export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop, onOpenMenu }: TaskListProps) {
   const [showCompleted, setShowCompleted] = useState(false)
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
@@ -36,6 +108,26 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   const [celebratingTasks, setCelebratingTasks] = useState<Set<string>>(new Set())
   // Changed: Track tasks with pending server updates to preserve optimistic state
   const pendingServerUpdatesRef = useRef<Set<string>>(new Set())
+  // Changed: Track active dragging task for overlay
+  const [activeTask, setActiveTask] = useState<Task | null>(null)
+
+  // Changed: Set up drag and drop sensors with touch support
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement required before drag starts
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 200, // 200ms hold before drag starts on touch
+        tolerance: 5, // Allow 5px movement during delay
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   // Changed: Get current list name for empty state
   const currentList = listSlug ? lists.find(l => l.slug === listSlug) : null
@@ -271,8 +363,90 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
     pendingServerUpdatesRef.current.delete(taskId)
   }, [])
 
+  // Changed: Handle drag start - store the active task for the overlay
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event
+    const task = tasks.find(t => t.id === active.id)
+    if (task) {
+      setActiveTask(task)
+    }
+  }, [tasks])
+
+  // Changed: Handle drag end - reorder tasks and persist to API
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event
+    setActiveTask(null)
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    // Get only pending (non-completed) tasks for reordering
+    const pendingTasksList = tasks.filter(task => !task.metadata.completed || celebratingTasks.has(task.id))
+    const oldIndex = pendingTasksList.findIndex(t => t.id === active.id)
+    const newIndex = pendingTasksList.findIndex(t => t.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return
+    }
+
+    // Reorder the pending tasks
+    const reorderedPendingTasks = arrayMove(pendingTasksList, oldIndex, newIndex)
+
+    // Assign new order values
+    const updatedPendingTasks = reorderedPendingTasks.map((task, index) => ({
+      ...task,
+      metadata: { ...task.metadata, order: index }
+    }))
+
+    // Merge back with completed tasks
+    const completedTasksList = tasks.filter(task => task.metadata.completed && !celebratingTasks.has(task.id))
+    const newTasks = [...updatedPendingTasks, ...completedTasksList]
+
+    // Optimistically update local state
+    setTasks(newTasks)
+
+    // Persist to server
+    try {
+      const reorderData = updatedPendingTasks.map((task, index) => ({
+        id: task.id,
+        order: index
+      }))
+
+      console.log('Sending reorder request:', JSON.stringify(reorderData, null, 2))
+
+      const response = await fetch('/api/tasks/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tasks: reorderData })
+      })
+
+      const result = await response.json()
+      console.log('Reorder response:', JSON.stringify(result, null, 2))
+
+      if (!response.ok) {
+        console.error('Reorder failed:', result)
+        // Revert on error
+        setTasks(tasks)
+      }
+    } catch (error) {
+      console.error('Error saving task order:', error)
+      // Revert on error
+      setTasks(tasks)
+    }
+  }, [tasks, celebratingTasks])
+
   // Changed: Include celebrating tasks in pending list so they stay visible during animation
-  const pendingTasks = tasks.filter(task => !task.metadata.completed || celebratingTasks.has(task.id))
+  // Sort by order field if available, otherwise by created_at
+  const pendingTasks = tasks
+    .filter(task => !task.metadata.completed || celebratingTasks.has(task.id))
+    .sort((a, b) => {
+      const orderA = a.metadata.order ?? Infinity
+      const orderB = b.metadata.order ?? Infinity
+      if (orderA !== orderB) return orderA - orderB
+      // Fall back to created_at for tasks without order
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    })
   // Changed: Exclude celebrating tasks from completed list temporarily
   const completedTasks = tasks.filter(task => task.metadata.completed && !celebratingTasks.has(task.id))
 
@@ -280,19 +454,49 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
     <>
       {/* Changed: Task list with proper spacing - added pb-28 for larger mobile bottom padding */}
       <div className="space-y-2.5 md:space-y-2 pb-28 md:pb-24">
-        {/* Pending Tasks */}
-        {pendingTasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            lists={lists}
-            onOptimisticToggle={handleOptimisticToggle}
-            onOptimisticDelete={handleOptimisticDelete}
-            onOptimisticUpdate={handleOptimisticUpdate}
-            onSyncComplete={clearPendingState}
-            onAnimationComplete={handleAnimationComplete}
-          />
-        ))}
+        {/* Pending Tasks - with drag and drop support */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={pendingTasks.map(t => t.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2.5 md:space-y-2">
+              {pendingTasks.map((task) => (
+                <SortableTaskCard
+                  key={task.id}
+                  task={task}
+                  lists={lists}
+                  onOptimisticToggle={handleOptimisticToggle}
+                  onOptimisticDelete={handleOptimisticDelete}
+                  onOptimisticUpdate={handleOptimisticUpdate}
+                  onSyncComplete={clearPendingState}
+                  onAnimationComplete={handleAnimationComplete}
+                />
+              ))}
+            </div>
+          </SortableContext>
+
+          {/* Drag overlay for smooth visual feedback */}
+          <DragOverlay>
+            {activeTask ? (
+              <div className="opacity-90">
+                <TaskCard
+                  task={activeTask}
+                  lists={lists}
+                  onOptimisticToggle={() => {}}
+                  onOptimisticDelete={() => {}}
+                  onOptimisticUpdate={() => {}}
+                  isDragging={true}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
         {/* Changed: Completed Section - Collapsible - increased touch targets */}
         {completedTasks.length > 0 && (
