@@ -7,6 +7,8 @@ import ClientMobileHeader from '@/components/ClientMobileHeader'
 import ClientListHeader from '@/components/ClientListHeader'
 import SkeletonLoader from '@/components/SkeletonLoader'
 import { useRouter, usePathname } from 'next/navigation'
+import { List } from '@/types'
+import { ChevronDown, Inbox } from 'lucide-react'
 
 interface ListPageClientProps {
   slug: string
@@ -15,23 +17,61 @@ interface ListPageClientProps {
 export default function ListPageClient({ slug: initialSlug }: ListPageClientProps) {
   const router = useRouter()
   const pathname = usePathname()
-  
+
   // Changed: Ref to scrollable container to reset scroll on navigation
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  
+
   // Changed: Track current list slug for client-side navigation without page reload
   const [currentListSlug, setCurrentListSlug] = useState<string | undefined>(
     initialSlug === '' ? undefined : initialSlug
   )
-  
+
   // Changed: Track when a list is being created to show loading state
   const [isCreatingList, setIsCreatingList] = useState(false)
-  
+
   // Changed: Track refresh key to trigger list area refresh when list is updated
   const [refreshKey, setRefreshKey] = useState(0)
-  
+
   // Changed: Store the menu open function from MobileHeader
   const [openMenuFn, setOpenMenuFn] = useState<(() => void) | null>(null)
+
+  // State for All Tasks list selector dropdown
+  const [showAllTasksDropdown, setShowAllTasksDropdown] = useState(false)
+  const [allLists, setAllLists] = useState<List[]>([])
+  const allTasksDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Fetch lists for the All Tasks dropdown
+  useEffect(() => {
+    const fetchLists = async () => {
+      try {
+        const response = await fetch('/api/lists')
+        if (response.ok) {
+          const data = await response.json()
+          setAllLists(data.lists || [])
+        }
+      } catch (error) {
+        console.error('Error fetching lists:', error)
+      }
+    }
+    fetchLists()
+  }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (allTasksDropdownRef.current && !allTasksDropdownRef.current.contains(event.target as Node)) {
+        setShowAllTasksDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Handle list selection from All Tasks dropdown
+  const handleAllTasksListSelect = (slug?: string) => {
+    setShowAllTasksDropdown(false)
+    handleListChange(slug)
+  }
 
   // Changed: Sync currentListSlug with URL changes (browser back/forward)
   useEffect(() => {
@@ -60,7 +100,7 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
   // Changed: Callback to handle list selection without reloading page
   const handleListChange = useCallback((newSlug?: string) => {
     setCurrentListSlug(newSlug)
-    
+
     // Changed: Update URL without causing page reload using router.replace
     if (newSlug) {
       router.replace(`/lists/${newSlug}`, { scroll: false })
@@ -83,39 +123,101 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
     // Changed: Use h-screen with flex layout and overflow-hidden to prevent excessive scrolling
     <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
       {/* Desktop Sidebar - Changed: Pass onListChange to prevent sidebar reload */}
-      <ClientSidebar 
+      <ClientSidebar
         currentListSlug={currentListSlug}
         onListChange={handleListChange}
         onCreatingStateChange={setIsCreatingList}
         onListRefresh={handleListRefresh}
       />
-      
+
       {/* Changed: Main Content - no top header on mobile, menu accessed via bottom button */}
       <main className="flex-1 flex flex-col min-h-0">
         {/* Changed: Mobile Menu - renders full-page menu overlay, button is in TaskList */}
-        <ClientMobileHeader 
+        <ClientMobileHeader
           currentListSlug={currentListSlug}
           onListChange={handleListChange}
           onListRefresh={handleListRefresh}
           onMenuOpenRegister={handleMenuOpenRegister}
         />
-        
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-safe-top">
-          <div className="max-w-2xl mx-auto px-4 pb-32 pt-4 md:py-8">
+
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-4 pb-32">
             {/* Changed: Show creating list loading state when a list is being created */}
             {isCreatingList ? (
-              <SkeletonLoader variant="creating-list" />
+              <div className="pt-safe-top pt-2 md:pt-8">
+                <SkeletonLoader variant="creating-list" />
+              </div>
             ) : currentListSlug ? (
               <>
-                <ClientListHeader listSlug={currentListSlug} refreshKey={refreshKey} />
+                {/* Changed: Sticky header for consistent behavior on mobile and desktop */}
+                {/* Using z-20 to ensure it stays above task cards which may have transforms */}
+                {/* pt-safe-top handles the notch on mobile devices */}
+                <div className="sticky top-0 z-20 bg-gray-50 dark:bg-black pt-safe-top pt-2 md:pt-8 pb-2 -mx-4 px-4">
+                  <ClientListHeader
+                    listSlug={currentListSlug}
+                    refreshKey={refreshKey}
+                    onListChange={handleListChange}
+                    onRefresh={handleListRefresh}
+                  />
+                </div>
                 <ClientTaskList listSlug={currentListSlug} refreshKey={refreshKey} onScrollToTop={scrollToTop} onOpenMenu={openMenuFn || undefined} />
               </>
             ) : (
               // Changed: Show All Tasks when no list is selected
               <>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                  All Tasks
-                </h1>
+                {/* Changed: Sticky header for consistent behavior on mobile and desktop */}
+                {/* Using z-20 to ensure it stays above task cards which may have transforms */}
+                {/* pt-safe-top handles the notch on mobile devices */}
+                <div className="sticky top-0 z-20 bg-gray-50 dark:bg-black pt-safe-top pt-2 md:pt-8 pb-2 -mx-4 px-4">
+                  <div className="mb-6">
+                    {/* List selector dropdown - covers entire title area */}
+                    <div className="relative" ref={allTasksDropdownRef}>
+                      <button
+                        onClick={() => setShowAllTasksDropdown(!showAllTasksDropdown)}
+                        className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                        aria-label="Switch list"
+                      >
+                        <Inbox className="w-5 h-5 text-gray-500" />
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                          All Tasks
+                        </h1>
+                        <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showAllTasksDropdown ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {/* List selector dropdown menu */}
+                      {showAllTasksDropdown && (
+                        <div className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 max-h-80 overflow-y-auto">
+                          {/* All Tasks option - currently selected */}
+                          <button
+                            onClick={() => handleAllTasksListSelect(undefined)}
+                            className="w-full px-3 py-2 text-sm text-left bg-accent/10 text-accent flex items-center gap-2.5 transition-colors"
+                          >
+                            <Inbox className="w-5 h-5" />
+                            <span className="truncate font-medium">All Tasks</span>
+                          </button>
+
+                          {allLists.length > 0 && (
+                            <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                          )}
+
+                          {allLists.map((listItem) => (
+                            <button
+                              key={listItem.id}
+                              onClick={() => handleAllTasksListSelect(listItem.slug)}
+                              className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                            >
+                              <div
+                                className="w-5 h-5 rounded-full flex-shrink-0"
+                                style={{ backgroundColor: listItem.metadata.color || '#3b82f6' }}
+                              />
+                              <span className="truncate">{listItem.metadata.name || listItem.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
                 <ClientTaskList refreshKey={refreshKey} onScrollToTop={scrollToTop} onOpenMenu={openMenuFn || undefined} />
               </>
             )}
