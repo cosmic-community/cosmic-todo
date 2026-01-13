@@ -89,6 +89,17 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
     setHasDescription(hasDesc)
   }, [])
 
+  // Changed: Calculate bottom padding class based on auth state and description
+  const getContentPaddingClass = () => {
+    if (hasDescription) {
+      // With description - need more space for taller header
+      return isAuthenticated ? 'list-content-with-description' : 'list-content-with-description-logged-out'
+    } else {
+      // No description - shorter header
+      return isAuthenticated ? 'list-content-no-description' : 'list-content-no-description-logged-out'
+    }
+  }
+
   return (
     // Changed: Use h-screen with flex layout and overflow-hidden to prevent excessive scrolling
     <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
@@ -140,8 +151,8 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
                 <div className="hidden md:block">
                   <ClientListHeader listSlug={currentListSlug} refreshKey={refreshKey} />
                 </div>
-                {/* Changed: Add dynamic top padding on mobile based on description presence */}
-                <div className={`md:hidden ${hasDescription ? 'list-content-with-description' : 'list-content-no-description'}`}>
+                {/* Changed: Add dynamic top padding on mobile based on description presence and auth state */}
+                <div className={`md:hidden ${getContentPaddingClass()}`}>
                   <ClientTaskList 
                     listSlug={currentListSlug} 
                     refreshKey={refreshKey} 
@@ -170,8 +181,8 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
                     All Tasks
                   </h1>
                 </div>
-                {/* Changed: Mobile content with padding for fixed header (no description) */}
-                <div className="md:hidden list-content-no-description">
+                {/* Changed: Mobile content with padding for fixed header (no description) - different for logged in vs out */}
+                <div className={`md:hidden ${isAuthenticated ? 'list-content-no-description' : 'list-content-no-description-logged-out'}`}>
                   <ClientTaskList 
                     refreshKey={refreshKey} 
                     onScrollToTop={scrollToTop} 

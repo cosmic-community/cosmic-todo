@@ -242,13 +242,23 @@
     border-bottom-color: #374151;
   }
 
-  /* Changed: Add padding to list content for fixed header - WITH description (larger header) */
+  /* Changed: Add padding to list content for fixed header - WITH description (larger header) - logged in */
   .list-content-with-description {
     padding-top: 6.5rem;
   }
 
-  /* Changed: Add padding to list content for fixed header - WITHOUT description (smaller header) */
+  /* Changed: Add padding to list content for fixed header - WITHOUT description (smaller header) - logged in */
   .list-content-no-description {
+    padding-top: 4.5rem;
+  }
+
+  /* Changed: Add padding to list content for fixed header - WITH description (larger header) - logged out (extra bottom padding for demo message) */
+  .list-content-with-description-logged-out {
+    padding-top: 6.5rem;
+  }
+
+  /* Changed: Add padding to list content for fixed header - WITHOUT description (smaller header) - logged out (extra bottom padding for demo message) */
+  .list-content-no-description-logged-out {
     padding-top: 4.5rem;
   }
 }
