@@ -110,7 +110,8 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
             ) : currentListSlug ? (
               <>
                 {/* Changed: Sticky header for consistent behavior on mobile and desktop */}
-                <div className="sticky top-0 z-10 bg-gray-50 dark:bg-black pt-4 md:pt-8 pb-2">
+                {/* Using z-20 to ensure it stays above task cards which may have transforms */}
+                <div className="sticky top-0 z-20 bg-gray-50 dark:bg-black pt-2 md:pt-8 pb-2 -mx-4 px-4">
                   <ClientListHeader 
                     listSlug={currentListSlug} 
                     refreshKey={refreshKey}
@@ -124,7 +125,8 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
               // Changed: Show All Tasks when no list is selected
               <>
                 {/* Changed: Sticky header for consistent behavior on mobile and desktop */}
-                <div className="sticky top-0 z-10 bg-gray-50 dark:bg-black pt-4 md:pt-8 pb-2">
+                {/* Using z-20 to ensure it stays above task cards which may have transforms */}
+                <div className="sticky top-0 z-20 bg-gray-50 dark:bg-black pt-2 md:pt-8 pb-2 -mx-4 px-4">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
                     All Tasks
                   </h1>

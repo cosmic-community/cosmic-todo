@@ -205,61 +205,58 @@ export default function ClientListHeader({ listSlug, refreshKey, onListChange, o
     <>
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-4 h-4 rounded-full flex-shrink-0"
-              style={{ backgroundColor: list.metadata.color || '#3b82f6' }}
-            />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {list.metadata.name}
-            </h1>
-            
-            {/* List selector dropdown */}
-            <div className="relative" ref={listSelectorRef}>
-              <button
-                onClick={() => setShowListSelector(!showListSelector)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                aria-label="Switch list"
-              >
-                <ChevronDown className={`w-5 h-5 transition-transform ${showListSelector ? 'rotate-180' : ''}`} />
-              </button>
+          {/* List selector dropdown - covers entire title area */}
+          <div className="relative" ref={listSelectorRef}>
+            <button
+              onClick={() => setShowListSelector(!showListSelector)}
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+              aria-label="Switch list"
+            >
+              <div 
+                className="w-4 h-4 rounded-full flex-shrink-0"
+                style={{ backgroundColor: list.metadata.color || '#3b82f6' }}
+              />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {list.metadata.name}
+              </h1>
+              <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${showListSelector ? 'rotate-180' : ''}`} />
+            </button>
 
-              {/* List selector dropdown menu */}
-              {showListSelector && (
-                <div className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 max-h-80 overflow-y-auto">
-                  {/* All Tasks option */}
+            {/* List selector dropdown menu */}
+            {showListSelector && (
+              <div className="absolute left-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 max-h-80 overflow-y-auto">
+                {/* All Tasks option */}
+                <button
+                  onClick={() => handleListSelect(undefined)}
+                  className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                >
+                  <Inbox className="w-5 h-5 text-gray-500" />
+                  <span className="truncate font-medium">All Tasks</span>
+                </button>
+                
+                {allLists.length > 0 && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
+                )}
+                
+                {allLists.map((listItem) => (
                   <button
-                    onClick={() => handleListSelect(undefined)}
-                    className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                    key={listItem.id}
+                    onClick={() => handleListSelect(listItem.slug)}
+                    className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2.5 transition-colors ${
+                      listItem.slug === listSlug
+                        ? 'bg-accent/10 text-accent'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
                   >
-                    <Inbox className="w-5 h-5 text-gray-500" />
-                    <span className="truncate font-medium">All Tasks</span>
+                    <div 
+                      className="w-5 h-5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: listItem.metadata.color || '#3b82f6' }}
+                    />
+                    <span className="truncate">{listItem.metadata.name || listItem.title}</span>
                   </button>
-                  
-                  {allLists.length > 0 && (
-                    <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-                  )}
-                  
-                  {allLists.map((listItem) => (
-                    <button
-                      key={listItem.id}
-                      onClick={() => handleListSelect(listItem.slug)}
-                      className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2.5 transition-colors ${
-                        listItem.slug === listSlug
-                          ? 'bg-accent/10 text-accent'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <div 
-                        className="w-5 h-5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: listItem.metadata.color || '#3b82f6' }}
-                      />
-                      <span className="truncate">{listItem.metadata.name || listItem.title}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Right side buttons */}
