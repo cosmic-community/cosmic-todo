@@ -6,6 +6,7 @@ import { Task, List } from '@/types'
 import TaskCard from '@/components/TaskCard'
 import AddTaskForm from '@/components/AddTaskForm'
 import EmptyState from '@/components/EmptyState'
+import AllDoneCelebration from '@/components/AllDoneCelebration'
 import { ChevronRight, Menu } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -123,6 +124,10 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   const reorderAbortControllerRef = useRef<AbortController | null>(null)
   // Changed: Track if any modal is open to disable dragging
   const [isModalOpen, setIsModalOpen] = useState(false)
+  // Changed: Track if we should show the "all done" celebration
+  const [showAllDoneCelebration, setShowAllDoneCelebration] = useState(false)
+  // Changed: Track previous pending task count to detect transition to all done
+  const prevPendingCountRef = useRef<number | null>(null)
 
   // Changed: Set up drag and drop sensors with touch support
   const sensors = useSensors(
@@ -292,6 +297,33 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
     }
   }, [])
 
+  // Changed: Detect when all tasks are completed and show celebration
+  useEffect(() => {
+    // Calculate real pending tasks (excluding celebrating ones since they're about to be completed)
+    const realPendingCount = tasks.filter(
+      task => !task.metadata.completed && !celebratingTasks.has(task.id)
+    ).length
+    const totalTasks = tasks.length
+    
+    // Only show celebration if:
+    // 1. We have tasks (not an empty list)
+    // 2. We had pending tasks before
+    // 3. Now we have 0 pending tasks (all completed)
+    // 4. There are completed tasks (we actually completed something)
+    if (
+      prevPendingCountRef.current !== null &&
+      prevPendingCountRef.current > 0 &&
+      realPendingCount === 0 &&
+      totalTasks > 0 &&
+      tasks.some(t => t.metadata.completed)
+    ) {
+      setShowAllDoneCelebration(true)
+    }
+    
+    // Update the ref for next comparison
+    prevPendingCountRef.current = realPendingCount
+  }, [tasks, celebratingTasks])
+
   // Handlers for optimistic updates
   // Changed: Scroll to top after adding task to fix mobile scroll issues
   const handleOptimisticAdd = useCallback((task: Task) => {
@@ -391,6 +423,11 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   // Changed: Handler for modal open/close to disable dragging when modal is open
   const handleModalOpenChange = useCallback((isOpen: boolean) => {
     setIsModalOpen(isOpen)
+  }, [])
+
+  // Changed: Handler for when the all-done celebration completes
+  const handleCelebrationComplete = useCallback(() => {
+    setShowAllDoneCelebration(false)
   }, [])
 
   // Changed: Handle drag start - store the active task for the overlay
@@ -657,6 +694,11 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
           </div>
         </div>
       </div>
+
+      {/* Changed: All done celebration when all tasks are completed */}
+      {showAllDoneCelebration && (
+        <AllDoneCelebration onComplete={handleCelebrationComplete} />
+      )}
     </>
   )
 }
