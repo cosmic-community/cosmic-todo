@@ -271,7 +271,7 @@ export default function ClientListHeader({ listSlug, refreshKey, onListChange, o
                 {/* All Tasks option */}
                 <button
                   onClick={() => handleListSelect(undefined)}
-                  className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                  className="w-full px-4 py-3 text-base md:px-3 md:py-2 md:text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
                 >
                   <Inbox className="w-5 h-5 text-gray-500" />
                   <span className="truncate font-medium">All Tasks</span>
@@ -285,7 +285,7 @@ export default function ClientListHeader({ listSlug, refreshKey, onListChange, o
                   <button
                     key={listItem.id}
                     onClick={() => handleListSelect(listItem.slug)}
-                    className={`w-full px-3 py-2 text-sm text-left flex items-center gap-2.5 transition-colors ${
+                    className={`w-full px-4 py-3 text-base md:px-3 md:py-2 md:text-sm text-left flex items-center gap-2.5 transition-colors ${
                       listItem.slug === listSlug
                         ? 'bg-accent/10 text-accent'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -328,7 +328,7 @@ export default function ClientListHeader({ listSlug, refreshKey, onListChange, o
               {/* Users with access dropdown menu */}
               {showSharedDropdown && (
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
-                  <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  <div className="px-4 py-2 text-sm md:px-3 md:py-1.5 md:text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                     People with access
                   </div>
                   {allUsersWithAccess.map((userObj) => {
@@ -337,7 +337,7 @@ export default function ClientListHeader({ listSlug, refreshKey, onListChange, o
                     return (
                       <div
                         key={userObj.id}
-                        className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2.5"
+                        className="px-4 py-3 text-base md:px-3 md:py-2 md:text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2.5"
                       >
                         <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center text-xs font-medium text-accent">
                           {getUserDisplayName(userObj).charAt(0).toUpperCase()}
@@ -361,7 +361,7 @@ export default function ClientListHeader({ listSlug, refreshKey, onListChange, o
                         setShowSharedDropdown(false)
                         setShowInviteModal(true)
                       }}
-                      className="w-full px-3 py-2 text-sm text-left text-accent hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                      className="w-full px-4 py-3 text-base md:px-3 md:py-2 md:text-sm text-left text-accent hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
                     >
                       <UserPlus className="w-4 h-4" />
                       <span>Invite someone</span>
