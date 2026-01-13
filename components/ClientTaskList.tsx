@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Task, List } from '@/types'
 import TaskList from './TaskList'
 import SkeletonLoader from './SkeletonLoader'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface ClientTaskListProps {
   listSlug?: string
@@ -24,6 +25,10 @@ export default function ClientTaskList({ listSlug, refreshKey, onScrollToTop, on
   const [error, setError] = useState<string | null>(null)
   const [listRetryCount, setListRetryCount] = useState(0)
   const maxRetries = 10
+  
+  // Changed: Track auth state to refetch on login/logout
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth()
+  const prevAuthStateRef = useRef<boolean | null>(null)
   
   // Changed: Use refs to track fetch state and prevent infinite loops
   const isFetchingRef = useRef(false)
@@ -271,6 +276,50 @@ export default function ClientTaskList({ listSlug, refreshKey, onScrollToTop, on
       refreshData()
     }
   }, [refreshKey, fetchLists, fetchTasksForList, listSlug])
+
+  // Changed: Effect to refresh data when auth state changes (login/logout)
+  useEffect(() => {
+    // Skip if auth is still loading
+    if (isAuthLoading) return
+
+    const authStateChanged = prevAuthStateRef.current !== null && prevAuthStateRef.current !== isAuthenticated
+    
+    if (authStateChanged) {
+      // Auth state changed - clear everything and refetch
+      setTasks([])
+      setLists([])
+      setList(null)
+      setIsLoading(true)
+      hasFetchedTasksRef.current = false
+      lastListIdRef.current = null
+      lastTasksHashRef.current = ''
+      isFetchingRef.current = false
+      setListRetryCount(0)
+      
+      // Force a new fetch
+      const refreshData = async () => {
+        const { found, foundList } = await fetchLists()
+        
+        if (foundList) {
+          setList(foundList)
+          lastListIdRef.current = foundList.id
+          await fetchTasksForList(foundList.id)
+          hasFetchedTasksRef.current = true
+        } else if (!listSlug) {
+          await fetchTasksForList(null)
+          hasFetchedTasksRef.current = true
+        }
+        
+        if (isMountedRef.current) {
+          setIsLoading(false)
+        }
+      }
+      
+      refreshData()
+    }
+    
+    prevAuthStateRef.current = isAuthenticated
+  }, [isAuthenticated, isAuthLoading, fetchLists, fetchTasksForList, listSlug])
 
   // Changed: Cleanup polling on unmount and handle visibility changes
   useEffect(() => {

@@ -21,7 +21,7 @@ interface TaskCardProps {
   onAnimationComplete?: (taskId: string) => void
   // Changed: Props for drag and drop
   isDragging?: boolean
-  dragHandleProps?: Record<string, unknown>
+  showDragHandle?: boolean
 }
 
 // Changed: Simplified confetti particle without overflow issues
@@ -76,7 +76,7 @@ export default function TaskCard({
   onSyncComplete,
   onAnimationComplete,
   isDragging: isDraggingProp,
-  dragHandleProps
+  showDragHandle
 }: TaskCardProps) {
   // Changed: Get checkbox position from user preferences
   const { user } = useAuth()
@@ -269,35 +269,27 @@ export default function TaskCard({
         {/* Changed: Removed overflow-hidden to allow confetti to be visible outside the card - increased padding for mobile */}
         <div className="relative">
           <div 
-            className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-4 md:py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800 group ${
-              isDraggingProp ? 'shadow-lg ring-2 ring-accent/50 opacity-90' : ''
-            }`}
+            className={`bg-white dark:bg-gray-900 rounded-xl px-4 py-4 md:py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-800 group ${
+              isDraggingProp ? 'shadow-lg ring-2 ring-accent/50 opacity-90 cursor-grabbing' : ''
+            } ${showDragHandle && !task.metadata.completed ? 'cursor-grab' : 'cursor-pointer'}`}
             style={{
               // Changed: Reverse flex direction when checkbox is on right
               flexDirection: checkboxPosition === 'right' ? 'row-reverse' : 'row',
             }}
             onClick={handleCardClick}
           >
-            {/* Changed: Checkbox on the edge, icons next to it */}
+            {/* Checkbox on the edge */}
             {CheckboxButton}
             
-            {/* Task attribute indicators - flag always next to checkbox */}
-            <div className={`flex items-center gap-3 flex-shrink-0 ${checkboxPosition === 'right' ? 'flex-row-reverse' : ''}`}>
-              {/* Priority indicator - always next to checkbox, color coded */}
-              {task.metadata.priority && (
-                <span title={`Priority: ${task.metadata.priority.value}`}>
-                  <Flag className={`w-4 h-4 ${
-                    showCheckmark 
-                      ? 'text-gray-300 dark:text-gray-600' 
-                      : task.metadata.priority.key === 'high' 
-                        ? 'text-red-500 dark:text-red-400' 
-                        : task.metadata.priority.key === 'medium' 
-                          ? 'text-yellow-500 dark:text-yellow-400' 
-                          : 'text-blue-500 dark:text-blue-400'
-                  }`} />
-                </span>
-              )}
-              
+            {/* Title - use showCheckmark for visual styling - increased text size on mobile */}
+            <span className={`flex-1 text-lg md:text-base transition-all duration-300 ease-out ${
+              showCheckmark ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
+            }`}>
+              {task.metadata.title}
+            </span>
+            
+            {/* Task attribute indicators - description and due date */}
+            <div className="flex items-center gap-2 flex-shrink-0">
               {/* Description indicator */}
               {task.metadata.description && (
                 <span title="Has description">
@@ -313,14 +305,7 @@ export default function TaskCard({
               )}
             </div>
             
-            {/* Changed: Title - use showCheckmark for visual styling - increased text size on mobile */}
-            <span className={`flex-1 text-lg md:text-base transition-all duration-300 ease-out ${
-              showCheckmark ? 'text-gray-400 dark:text-gray-500 line-through' : 'text-gray-900 dark:text-white'
-            }`}>
-              {task.metadata.title}
-            </span>
-            
-            {/* Changed: Delete button - only show for completed tasks that aren't celebrating - increased touch target */}
+            {/* Delete button - only show for completed tasks that aren't celebrating */}
             {task.metadata.completed && !showCelebration && (
               <button
                 onClick={handleDelete}
@@ -331,19 +316,22 @@ export default function TaskCard({
                 <Trash2 className="w-5 h-5 md:w-4 md:h-4" />
               </button>
             )}
-            
-            {/* Drag handle - on opposite end of checkbox, always visible on mobile, hover on desktop */}
-            {dragHandleProps && !task.metadata.completed && (
-              <div
-                {...dragHandleProps}
-                className={`flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-opacity touch-none ${
-                  isDraggingProp ? 'opacity-100' : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
-                }`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <GripVertical className="w-5 h-5" />
-              </div>
+
+            {/* Priority flag - always at the far edge (opposite of checkbox) */}
+            {task.metadata.priority && (
+              <span title={`Priority: ${task.metadata.priority.value}`} className="flex-shrink-0">
+                <Flag className={`w-4 h-4 ${
+                  showCheckmark 
+                    ? 'text-gray-300 dark:text-gray-600' 
+                    : task.metadata.priority.key === 'high' 
+                      ? 'text-red-500 dark:text-red-400' 
+                      : task.metadata.priority.key === 'medium' 
+                        ? 'text-yellow-500 dark:text-yellow-400' 
+                        : 'text-blue-500 dark:text-blue-400'
+                }`} />
+              </span>
             )}
+            
           </div>
         </div>
       </div>

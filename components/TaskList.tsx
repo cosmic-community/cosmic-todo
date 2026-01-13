@@ -79,7 +79,7 @@ function SortableTaskCard({
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <TaskCard
         task={task}
         lists={lists}
@@ -89,7 +89,7 @@ function SortableTaskCard({
         onSyncComplete={onSyncComplete}
         onAnimationComplete={onAnimationComplete}
         isDragging={isDragging}
-        dragHandleProps={listeners}
+        showDragHandle={true}
       />
     </div>
   )
@@ -110,6 +110,12 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   const pendingServerUpdatesRef = useRef<Set<string>>(new Set())
   // Changed: Track active dragging task for overlay
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  // Changed: Track if we're in the middle of a reorder operation
+  const isReorderingRef = useRef(false)
+  // Changed: Store local order values to preserve during server sync
+  const localOrderMapRef = useRef<Map<string, number>>(new Map())
+  // Changed: AbortController to cancel pending reorder requests
+  const reorderAbortControllerRef = useRef<AbortController | null>(null)
 
   // Changed: Set up drag and drop sensors with touch support
   const sensors = useSensors(
@@ -222,6 +228,10 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
         const pendingState = pendingStateChangesRef.current.get(serverTask.id)
         const hasPendingUpdate = pendingServerUpdatesRef.current.has(serverTask.id)
 
+        // Check if we have a local order value to preserve
+        const localOrder = localOrderMapRef.current.get(serverTask.id)
+        const shouldPreserveOrder = isReorderingRef.current && localOrder !== undefined
+
         if (localTask && (pendingState || hasPendingUpdate)) {
           // Changed: Preserve local optimistic state if there's a pending update
           // But merge in any other updated fields from server
@@ -232,12 +242,20 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
               // Preserve local completed state if pending
               completed: pendingState?.completed !== undefined
                 ? pendingState.completed
-                : (hasPendingUpdate ? localTask.metadata.completed : serverTask.metadata.completed)
+                : (hasPendingUpdate ? localTask.metadata.completed : serverTask.metadata.completed),
+              // Preserve local order if we're reordering
+              order: shouldPreserveOrder ? localOrder : serverTask.metadata.order
             }
           })
         } else {
-          // No pending state, use server data
-          mergedTasks.push(serverTask)
+          // No pending state, use server data but preserve order if reordering
+          mergedTasks.push({
+            ...serverTask,
+            metadata: {
+              ...serverTask.metadata,
+              order: shouldPreserveOrder ? localOrder : serverTask.metadata.order
+            }
+          })
         }
 
         processedIds.add(serverTask.id)
@@ -381,8 +399,16 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
       return
     }
 
-    // Get only pending (non-completed) tasks for reordering
-    const pendingTasksList = tasks.filter(task => !task.metadata.completed || celebratingTasks.has(task.id))
+    // Get only pending (non-completed) tasks for reordering - SORTED by current order
+    const pendingTasksList = tasks
+      .filter(task => !task.metadata.completed || celebratingTasks.has(task.id))
+      .sort((a, b) => {
+        const orderA = a.metadata.order ?? Infinity
+        const orderB = b.metadata.order ?? Infinity
+        if (orderA !== orderB) return orderA - orderB
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      })
+    
     const oldIndex = pendingTasksList.findIndex(t => t.id === active.id)
     const newIndex = pendingTasksList.findIndex(t => t.id === over.id)
 
@@ -399,15 +425,35 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
       metadata: { ...task.metadata, order: index }
     }))
 
-    // Merge back with completed tasks
-    const completedTasksList = tasks.filter(task => task.metadata.completed && !celebratingTasks.has(task.id))
-    const newTasks = [...updatedPendingTasks, ...completedTasksList]
+    // Store local order values to preserve during server sync
+    isReorderingRef.current = true
+    localOrderMapRef.current.clear()
+    updatedPendingTasks.forEach((task, index) => {
+      localOrderMapRef.current.set(task.id, index)
+    })
+
+    // Merge back with completed tasks - update order values in the full tasks array
+    const newTasks = tasks.map(task => {
+      const updatedTask = updatedPendingTasks.find(t => t.id === task.id)
+      if (updatedTask) {
+        return updatedTask
+      }
+      return task
+    })
 
     // Optimistically update local state
     setTasks(newTasks)
 
     // Persist to server
     try {
+      // Abort any pending reorder request
+      if (reorderAbortControllerRef.current) {
+        reorderAbortControllerRef.current.abort()
+      }
+      
+      // Create new abort controller for this request
+      reorderAbortControllerRef.current = new AbortController()
+      
       const reorderData = updatedPendingTasks.map((task, index) => ({
         id: task.id,
         order: index
@@ -418,7 +464,8 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
       const response = await fetch('/api/tasks/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: reorderData })
+        body: JSON.stringify({ tasks: reorderData }),
+        signal: reorderAbortControllerRef.current.signal
       })
 
       const result = await response.json()
@@ -427,11 +474,29 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
       if (!response.ok) {
         console.error('Reorder failed:', result)
         // Revert on error
+        isReorderingRef.current = false
+        localOrderMapRef.current.clear()
+        reorderAbortControllerRef.current = null
         setTasks(tasks)
+      } else {
+        // Success - clear reordering flag after a delay to let server catch up
+        setTimeout(() => {
+          isReorderingRef.current = false
+          localOrderMapRef.current.clear()
+          reorderAbortControllerRef.current = null
+        }, 2000)
       }
     } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Reorder request aborted')
+        return
+      }
       console.error('Error saving task order:', error)
       // Revert on error
+      isReorderingRef.current = false
+      localOrderMapRef.current.clear()
+      reorderAbortControllerRef.current = null
       setTasks(tasks)
     }
   }, [tasks, celebratingTasks])
