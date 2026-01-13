@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getUserByEmail } from '@/lib/cosmic'
 import { createToken, setAuthCookie } from '@/lib/auth'
+import { CheckboxPosition, ColorTheme, StyleTheme } from '@/types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,12 +42,29 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Create auth token
+    // Extract user preferences
+    const checkboxPosition = user.metadata.checkbox_position
+    const colorTheme = user.metadata.color_theme
+    const styleTheme = user.metadata.style_theme
+    
+    // Helper function to extract value from potential object or string
+    const extractValue = <T extends string>(value: T | { key: string; value: string } | undefined, defaultValue: T): T => {
+      if (!value) return defaultValue
+      if (typeof value === 'object' && 'key' in value) {
+        return value.key as T
+      }
+      return value as T
+    }
+    
+    // Create auth token and user object with preferences
     const authUser = {
       id: user.id,
       email: user.metadata.email,
       display_name: user.metadata.display_name,
-      email_verified: user.metadata.email_verified
+      email_verified: user.metadata.email_verified,
+      checkbox_position: extractValue<CheckboxPosition>(checkboxPosition, 'left'),
+      color_theme: extractValue<ColorTheme>(colorTheme, 'system'),
+      style_theme: extractValue<StyleTheme>(styleTheme, 'default')
     }
     
     const token = await createToken(authUser)
