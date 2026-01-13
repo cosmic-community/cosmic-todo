@@ -61,7 +61,7 @@ function FireworkBurst({
   const sparks = Array.from({ length: sparkCount }, (_, i) => {
     const angle = (i / sparkCount) * 360
     const distance = baseDistance + (Math.random() * 50 - 25)
-    const color = colors[i % colors.length]
+    const color = colors[i % colors.length] ?? '#ffffff'
     return { angle, distance, color, id: i }
   })
 
@@ -69,7 +69,7 @@ function FireworkBurst({
   const innerSparks = Array.from({ length: Math.floor(sparkCount / 2) }, (_, i) => {
     const angle = (i / (sparkCount / 2)) * 360 + 15
     const distance = baseDistance * 0.5 + (Math.random() * 30 - 15)
-    const color = colors[(i + 2) % colors.length]
+    const color = colors[(i + 2) % colors.length] ?? '#ffffff'
     return { angle, distance, color, id: i + sparkCount }
   })
 
@@ -77,7 +77,7 @@ function FireworkBurst({
   const outerSparks = Array.from({ length: Math.floor(sparkCount / 3) }, (_, i) => {
     const angle = (i / (sparkCount / 3)) * 360 + 30
     const distance = baseDistance * 1.3 + (Math.random() * 40 - 20)
-    const color = colors[(i + 1) % colors.length]
+    const color = colors[(i + 1) % colors.length] ?? '#ffffff'
     return { angle, distance, color, id: i + sparkCount + Math.floor(sparkCount / 2) }
   })
 
@@ -136,8 +136,8 @@ function FireworkBurst({
             height: `${flashSize}px`,
             marginLeft: `-${flashSize / 2}px`,
             marginTop: `-${flashSize / 2}px`,
-            backgroundColor: colors[0],
-            boxShadow: `0 0 ${flashSize * 5}px ${flashSize * 2}px ${colors[0]}`,
+            backgroundColor: colors[0] ?? '#ffffff',
+            boxShadow: `0 0 ${flashSize * 5}px ${flashSize * 2}px ${colors[0] ?? '#ffffff'}`,
             animationDelay: `${delay + 800}ms`
           }}
         />
@@ -229,17 +229,18 @@ export default function AllDoneCelebration({ onComplete }: AllDoneCelebrationPro
   const colorSets = getFireworkColors()
 
   // Generate multiple firework bursts at different positions and times
+  const defaultColors = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe']
   const fireworks = [
-    { x: 20, y: 60, colors: colorSets[0], delay: 0, size: 'large' as const },
-    { x: 50, y: 70, colors: colorSets[1 % colorSets.length], delay: 200, size: 'large' as const },
-    { x: 80, y: 55, colors: colorSets[2 % colorSets.length], delay: 400, size: 'large' as const },
-    { x: 35, y: 75, colors: colorSets[0], delay: 600, size: 'medium' as const },
-    { x: 65, y: 65, colors: colorSets[1 % colorSets.length], delay: 800, size: 'medium' as const },
-    { x: 15, y: 50, colors: colorSets[2 % colorSets.length], delay: 1000, size: 'medium' as const },
-    { x: 85, y: 70, colors: colorSets[0], delay: 1100, size: 'medium' as const },
-    { x: 50, y: 80, colors: colorSets[1 % colorSets.length], delay: 1300, size: 'large' as const },
-    { x: 30, y: 60, colors: colorSets[2 % colorSets.length], delay: 1500, size: 'small' as const },
-    { x: 70, y: 55, colors: colorSets[0], delay: 1600, size: 'small' as const },
+    { x: 20, y: 60, colors: colorSets[0] ?? defaultColors, delay: 0, size: 'large' as const },
+    { x: 50, y: 70, colors: colorSets[1 % colorSets.length] ?? defaultColors, delay: 200, size: 'large' as const },
+    { x: 80, y: 55, colors: colorSets[2 % colorSets.length] ?? defaultColors, delay: 400, size: 'large' as const },
+    { x: 35, y: 75, colors: colorSets[0] ?? defaultColors, delay: 600, size: 'medium' as const },
+    { x: 65, y: 65, colors: colorSets[1 % colorSets.length] ?? defaultColors, delay: 800, size: 'medium' as const },
+    { x: 15, y: 50, colors: colorSets[2 % colorSets.length] ?? defaultColors, delay: 1000, size: 'medium' as const },
+    { x: 85, y: 70, colors: colorSets[0] ?? defaultColors, delay: 1100, size: 'medium' as const },
+    { x: 50, y: 80, colors: colorSets[1 % colorSets.length] ?? defaultColors, delay: 1300, size: 'large' as const },
+    { x: 30, y: 60, colors: colorSets[2 % colorSets.length] ?? defaultColors, delay: 1500, size: 'small' as const },
+    { x: 70, y: 55, colors: colorSets[0] ?? defaultColors, delay: 1600, size: 'small' as const },
   ]
 
   useEffect(() => {
@@ -272,7 +273,7 @@ export default function AllDoneCelebration({ onComplete }: AllDoneCelebrationPro
           <FireworkTrail
             x={fw.x}
             y={fw.y}
-            color={fw.colors[0]}
+            color={fw.colors[0] ?? '#ffffff'}
             delay={fw.delay}
           />
           <FireworkBurst
