@@ -1,14 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, forwardRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { Task, List, StyleTheme } from '@/types'
-import { Trash2, FileText, Flag, Calendar, GripVertical } from 'lucide-react'
+import { Trash2, FileText, Flag, Calendar } from 'lucide-react'
 import EditTaskModal from '@/components/EditTaskModal'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/components/ThemeProvider'
-import { useSortable } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 
 interface TaskCardProps {
   task: Task
@@ -22,9 +20,6 @@ interface TaskCardProps {
   // Changed: Props for drag and drop
   isDragging?: boolean
   showDragHandle?: boolean
-  // Changed: Drag handle listeners and attributes for handle-only dragging
-  dragHandleListeners?: React.HTMLAttributes<HTMLButtonElement>
-  dragHandleAttributes?: React.HTMLAttributes<HTMLButtonElement>
   // Changed: Callback to notify parent when a modal opens/closes (for disabling drag)
   onModalOpenChange?: (isOpen: boolean) => void
 }
@@ -82,8 +77,6 @@ export default function TaskCard({
   onAnimationComplete,
   isDragging: isDraggingProp,
   showDragHandle,
-  dragHandleListeners,
-  dragHandleAttributes,
   onModalOpenChange
 }: TaskCardProps) {
   // Changed: Get checkbox position from user preferences
@@ -289,19 +282,6 @@ export default function TaskCard({
             } ${showDragHandle && !task.metadata.completed ? 'md:cursor-grab' : ''} cursor-pointer`}
             onClick={handleCardClick}
           >
-            {/* Drag handle - mobile only, LEFT side when checkbox is on right */}
-            {showDragHandle && !task.metadata.completed && checkboxPosition === 'right' && (
-              <button
-                className="md:hidden flex-shrink-0 touch-none cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 -ml-1"
-                onClick={(e) => e.stopPropagation()}
-                aria-label="Drag to reorder"
-                {...dragHandleAttributes}
-                {...dragHandleListeners}
-              >
-                <GripVertical className="w-5 h-5" />
-              </button>
-            )}
-            
             {/* Checkbox - left or right based on preference */}
             {checkboxPosition === 'left' && CheckboxButton}
             
@@ -358,19 +338,6 @@ export default function TaskCard({
 
             {/* Checkbox - right side if preference is right */}
             {checkboxPosition === 'right' && CheckboxButton}
-            
-            {/* Drag handle - mobile only, RIGHT side when checkbox is on left */}
-            {showDragHandle && !task.metadata.completed && checkboxPosition === 'left' && (
-              <button
-                className="md:hidden flex-shrink-0 touch-none cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 -mr-1"
-                onClick={(e) => e.stopPropagation()}
-                aria-label="Drag to reorder"
-                {...dragHandleAttributes}
-                {...dragHandleListeners}
-              >
-                <GripVertical className="w-5 h-5" />
-              </button>
-            )}
             
           </div>
         </div>

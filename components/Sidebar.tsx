@@ -341,7 +341,7 @@ export default function Sidebar({ lists, currentListSlug, isLoading = false, syn
           {/* Built with Cosmic button */}
           <div className="p-4 pb-2">
             <a
-              href={`https://www.cosmicjs.com?utm_source=bucket_${bucketSlug}&utm_medium=referral&utm_campaign=app_badge&utm_content=built_with_cosmic`}
+              href={`https://www.cosmicjs.com/community/projects/wunderlist-style-todo-manager?utm_source=bucket_${bucketSlug}&utm_medium=referral&utm_campaign=app_badge&utm_content=built_with_cosmic`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg text-sm font-medium transition-colors"
