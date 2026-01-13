@@ -17,21 +17,21 @@ interface ListPageClientProps {
 export default function ListPageClient({ slug: initialSlug }: ListPageClientProps) {
   const router = useRouter()
   const pathname = usePathname()
-  
+
   // Changed: Ref to scrollable container to reset scroll on navigation
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  
+
   // Changed: Track current list slug for client-side navigation without page reload
   const [currentListSlug, setCurrentListSlug] = useState<string | undefined>(
     initialSlug === '' ? undefined : initialSlug
   )
-  
+
   // Changed: Track when a list is being created to show loading state
   const [isCreatingList, setIsCreatingList] = useState(false)
-  
+
   // Changed: Track refresh key to trigger list area refresh when list is updated
   const [refreshKey, setRefreshKey] = useState(0)
-  
+
   // Changed: Store the menu open function from MobileHeader
   const [openMenuFn, setOpenMenuFn] = useState<(() => void) | null>(null)
 
@@ -100,7 +100,7 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
   // Changed: Callback to handle list selection without reloading page
   const handleListChange = useCallback((newSlug?: string) => {
     setCurrentListSlug(newSlug)
-    
+
     // Changed: Update URL without causing page reload using router.replace
     if (newSlug) {
       router.replace(`/lists/${newSlug}`, { scroll: false })
@@ -123,23 +123,23 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
     // Changed: Use h-screen with flex layout and overflow-hidden to prevent excessive scrolling
     <div className="flex h-screen bg-gray-50 dark:bg-black overflow-hidden">
       {/* Desktop Sidebar - Changed: Pass onListChange to prevent sidebar reload */}
-      <ClientSidebar 
+      <ClientSidebar
         currentListSlug={currentListSlug}
         onListChange={handleListChange}
         onCreatingStateChange={setIsCreatingList}
         onListRefresh={handleListRefresh}
       />
-      
+
       {/* Changed: Main Content - no top header on mobile, menu accessed via bottom button */}
       <main className="flex-1 flex flex-col min-h-0">
         {/* Changed: Mobile Menu - renders full-page menu overlay, button is in TaskList */}
-        <ClientMobileHeader 
+        <ClientMobileHeader
           currentListSlug={currentListSlug}
           onListChange={handleListChange}
           onListRefresh={handleListRefresh}
           onMenuOpenRegister={handleMenuOpenRegister}
         />
-        
+
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-4 pb-32">
             {/* Changed: Show creating list loading state when a list is being created */}
@@ -153,8 +153,8 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
                 {/* Using z-20 to ensure it stays above task cards which may have transforms */}
                 {/* pt-safe-top handles the notch on mobile devices */}
                 <div className="sticky top-0 z-20 bg-gray-50 dark:bg-black pt-safe-top pt-2 md:pt-8 pb-2 -mx-4 px-4">
-                  <ClientListHeader 
-                    listSlug={currentListSlug} 
+                  <ClientListHeader
+                    listSlug={currentListSlug}
                     refreshKey={refreshKey}
                     onListChange={handleListChange}
                     onRefresh={handleListRefresh}
@@ -195,18 +195,18 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
                             <Inbox className="w-5 h-5" />
                             <span className="truncate font-medium">All Tasks</span>
                           </button>
-                          
+
                           {allLists.length > 0 && (
                             <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
                           )}
-                          
+
                           {allLists.map((listItem) => (
                             <button
                               key={listItem.id}
                               onClick={() => handleAllTasksListSelect(listItem.slug)}
                               className="w-full px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
                             >
-                              <div 
+                              <div
                                 className="w-5 h-5 rounded-full flex-shrink-0"
                                 style={{ backgroundColor: listItem.metadata.color || '#3b82f6' }}
                               />
