@@ -101,21 +101,34 @@ export default function ListPageClient({ slug: initialSlug }: ListPageClientProp
         />
         
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-safe-top">
-          <div className="max-w-2xl mx-auto px-4 pb-32 pt-4 md:py-8">
+          <div className="max-w-2xl mx-auto px-4 pb-32">
             {/* Changed: Show creating list loading state when a list is being created */}
             {isCreatingList ? (
-              <SkeletonLoader variant="creating-list" />
+              <div className="pt-4 md:pt-8">
+                <SkeletonLoader variant="creating-list" />
+              </div>
             ) : currentListSlug ? (
               <>
-                <ClientListHeader listSlug={currentListSlug} refreshKey={refreshKey} />
+                {/* Changed: Sticky header for consistent behavior on mobile and desktop */}
+                <div className="sticky top-0 z-10 bg-gray-50 dark:bg-black pt-4 md:pt-8 pb-2">
+                  <ClientListHeader 
+                    listSlug={currentListSlug} 
+                    refreshKey={refreshKey}
+                    onListChange={handleListChange}
+                    onRefresh={handleListRefresh}
+                  />
+                </div>
                 <ClientTaskList listSlug={currentListSlug} refreshKey={refreshKey} onScrollToTop={scrollToTop} onOpenMenu={openMenuFn || undefined} />
               </>
             ) : (
               // Changed: Show All Tasks when no list is selected
               <>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                  All Tasks
-                </h1>
+                {/* Changed: Sticky header for consistent behavior on mobile and desktop */}
+                <div className="sticky top-0 z-10 bg-gray-50 dark:bg-black pt-4 md:pt-8 pb-2">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+                    All Tasks
+                  </h1>
+                </div>
                 <ClientTaskList refreshKey={refreshKey} onScrollToTop={scrollToTop} onOpenMenu={openMenuFn || undefined} />
               </>
             )}
