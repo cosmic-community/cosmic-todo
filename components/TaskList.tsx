@@ -68,16 +68,6 @@ function SortableTaskCard({
   onModalOpenChange,
   isDragDisabled,
 }: SortableTaskCardProps) {
-  const [isMobile, setIsMobile] = useState(false)
-  
-  // Detect mobile vs desktop for different drag behaviors
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
   const {
     attributes,
     listeners,
@@ -93,12 +83,8 @@ function SortableTaskCard({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  // On mobile: drag from handle only. On desktop: drag from entire card
-  const cardListeners = !isMobile && !isDragDisabled ? listeners : undefined
-  const handleListeners = isMobile && !isDragDisabled ? listeners : undefined
-
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...cardListeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...(isDragDisabled ? {} : listeners)}>
       <TaskCard
         task={task}
         lists={lists}
@@ -109,8 +95,6 @@ function SortableTaskCard({
         onAnimationComplete={onAnimationComplete}
         isDragging={isDragging}
         showDragHandle={true}
-        dragHandleListeners={handleListeners}
-        dragHandleAttributes={attributes}
         onModalOpenChange={onModalOpenChange}
       />
     </div>
@@ -146,6 +130,7 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   const justCompletedTaskRef = useRef(false)
 
   // Changed: Set up drag and drop sensors with touch support
+  // Mobile uses long-press (300ms) to activate drag mode
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -154,8 +139,8 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200, // 200ms hold before drag starts on touch
-        tolerance: 5, // Allow 5px movement during delay
+        delay: 300, // 300ms long-press to activate drag on mobile
+        tolerance: 8, // Allow 8px movement during long-press
       },
     }),
     useSensor(KeyboardSensor, {
