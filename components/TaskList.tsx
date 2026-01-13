@@ -52,6 +52,8 @@ interface SortableTaskCardProps {
   onOptimisticUpdate: (taskId: string, updates: Partial<Task['metadata']>) => void
   onSyncComplete: (taskId: string) => void
   onAnimationComplete: (taskId: string) => void
+  onModalOpenChange: (isOpen: boolean) => void
+  isDragDisabled: boolean
 }
 
 function SortableTaskCard({
@@ -62,6 +64,8 @@ function SortableTaskCard({
   onOptimisticUpdate,
   onSyncComplete,
   onAnimationComplete,
+  onModalOpenChange,
+  isDragDisabled,
 }: SortableTaskCardProps) {
   const {
     attributes,
@@ -70,7 +74,7 @@ function SortableTaskCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id })
+  } = useSortable({ id: task.id, disabled: isDragDisabled })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -79,7 +83,7 @@ function SortableTaskCard({
   }
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...(isDragDisabled ? {} : listeners)}>
       <TaskCard
         task={task}
         lists={lists}
@@ -90,6 +94,7 @@ function SortableTaskCard({
         onAnimationComplete={onAnimationComplete}
         isDragging={isDragging}
         showDragHandle={true}
+        onModalOpenChange={onModalOpenChange}
       />
     </div>
   )
@@ -116,6 +121,8 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   const localOrderMapRef = useRef<Map<string, number>>(new Map())
   // Changed: AbortController to cancel pending reorder requests
   const reorderAbortControllerRef = useRef<AbortController | null>(null)
+  // Changed: Track if any modal is open to disable dragging
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   // Changed: Set up drag and drop sensors with touch support
   const sensors = useSensors(
@@ -381,6 +388,11 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
     pendingServerUpdatesRef.current.delete(taskId)
   }, [])
 
+  // Changed: Handler for modal open/close to disable dragging when modal is open
+  const handleModalOpenChange = useCallback((isOpen: boolean) => {
+    setIsModalOpen(isOpen)
+  }, [])
+
   // Changed: Handle drag start - store the active task for the overlay
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event
@@ -541,6 +553,8 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
                   onOptimisticUpdate={handleOptimisticUpdate}
                   onSyncComplete={clearPendingState}
                   onAnimationComplete={handleAnimationComplete}
+                  onModalOpenChange={handleModalOpenChange}
+                  isDragDisabled={isModalOpen}
                 />
               ))}
             </div>

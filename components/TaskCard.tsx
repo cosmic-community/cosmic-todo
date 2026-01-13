@@ -22,6 +22,8 @@ interface TaskCardProps {
   // Changed: Props for drag and drop
   isDragging?: boolean
   showDragHandle?: boolean
+  // Changed: Callback to notify parent when a modal opens/closes (for disabling drag)
+  onModalOpenChange?: (isOpen: boolean) => void
 }
 
 // Changed: Simplified confetti particle without overflow issues
@@ -76,7 +78,8 @@ export default function TaskCard({
   onSyncComplete,
   onAnimationComplete,
   isDragging: isDraggingProp,
-  showDragHandle
+  showDragHandle,
+  onModalOpenChange
 }: TaskCardProps) {
   // Changed: Get checkbox position from user preferences
   const { user } = useAuth()
@@ -206,6 +209,13 @@ export default function TaskCard({
   // Changed: Handler for clicking the card area (not the checkbox)
   const handleCardClick = () => {
     setShowEditModal(true)
+    onModalOpenChange?.(true)
+  }
+  
+  // Changed: Handler for closing modal
+  const handleCloseModal = () => {
+    setShowEditModal(false)
+    onModalOpenChange?.(false)
   }
   
   // Changed: Theme-aware confetti colors - properly typed
@@ -345,7 +355,7 @@ export default function TaskCard({
         <EditTaskModal
           task={task}
           lists={lists}
-          onClose={() => setShowEditModal(false)}
+          onClose={handleCloseModal}
           onOptimisticUpdate={onOptimisticUpdate}
         />,
         document.body
