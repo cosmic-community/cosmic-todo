@@ -332,7 +332,7 @@ export default function TaskCard({
                     : task.metadata.priority.key === 'high' 
                       ? 'text-red-500 dark:text-red-400' 
                       : task.metadata.priority.key === 'medium' 
-                        ? 'text-yellow-500 dark:text-yellow-400' 
+                        ? 'text-gray-500 dark:text-gray-400' 
                         : 'text-blue-500 dark:text-blue-400'
                 }`} />
               </span>

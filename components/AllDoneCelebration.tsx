@@ -10,23 +10,27 @@ interface AllDoneCelebrationProps {
 }
 
 // Individual spark in a firework burst
-function Spark({ 
-  color, 
+function Spark({
+  color,
   angle,
   delay,
-  distance
-}: { 
+  distance,
+  size = 3
+}: {
   color: string
   angle: number
   delay: number
   distance: number
+  size?: number
 }) {
   return (
     <div
-      className="absolute w-2 h-2 rounded-full animate-firework-spark"
+      className="absolute rounded-full animate-firework-spark"
       style={{
+        width: `${size}px`,
+        height: `${size}px`,
         backgroundColor: color,
-        boxShadow: `0 0 6px 2px ${color}`,
+        boxShadow: `0 0 ${size * 3}px ${size}px ${color}`,
         animationDelay: `${delay}ms`,
         '--spark-angle': `${angle}deg`,
         '--spark-distance': `${distance}px`,
@@ -36,52 +40,63 @@ function Spark({
 }
 
 // A single firework burst
-function FireworkBurst({ 
-  x, 
-  y, 
-  colors, 
+function FireworkBurst({
+  x,
+  y,
+  colors,
   delay,
   size = 'medium'
-}: { 
+}: {
   x: number
   y: number
   colors: string[]
   delay: number
   size?: 'small' | 'medium' | 'large'
 }) {
-  const sparkCount = size === 'large' ? 24 : size === 'medium' ? 18 : 12
-  const baseDistance = size === 'large' ? 120 : size === 'medium' ? 90 : 60
-  
+  const sparkCount = size === 'large' ? 32 : size === 'medium' ? 24 : 16
+  const baseDistance = size === 'large' ? 200 : size === 'medium' ? 150 : 100
+  const sparkSize = size === 'large' ? 4 : size === 'medium' ? 3 : 2
+
   // Generate sparks in a circular pattern
   const sparks = Array.from({ length: sparkCount }, (_, i) => {
     const angle = (i / sparkCount) * 360
-    const distance = baseDistance + (Math.random() * 30 - 15)
+    const distance = baseDistance + (Math.random() * 50 - 25)
     const color = colors[i % colors.length]
     return { angle, distance, color, id: i }
   })
-  
+
   // Add some inner sparks for depth
   const innerSparks = Array.from({ length: Math.floor(sparkCount / 2) }, (_, i) => {
     const angle = (i / (sparkCount / 2)) * 360 + 15
-    const distance = baseDistance * 0.5 + (Math.random() * 20 - 10)
+    const distance = baseDistance * 0.5 + (Math.random() * 30 - 15)
     const color = colors[(i + 2) % colors.length]
     return { angle, distance, color, id: i + sparkCount }
   })
-  
+
+  // Add outer sparks for more impact
+  const outerSparks = Array.from({ length: Math.floor(sparkCount / 3) }, (_, i) => {
+    const angle = (i / (sparkCount / 3)) * 360 + 30
+    const distance = baseDistance * 1.3 + (Math.random() * 40 - 20)
+    const color = colors[(i + 1) % colors.length]
+    return { angle, distance, color, id: i + sparkCount + Math.floor(sparkCount / 2) }
+  })
+
+  const flashSize = size === 'large' ? 8 : size === 'medium' ? 6 : 4
+
   return (
-    <div 
+    <div
       className="absolute animate-firework-launch"
-      style={{ 
-        left: `${x}%`, 
+      style={{
+        left: `${x}%`,
         bottom: '-50px',
         '--launch-height': `${y}vh`,
         animationDelay: `${delay}ms`
       } as React.CSSProperties}
     >
       {/* Burst container - appears after launch */}
-      <div 
+      <div
         className="relative animate-firework-burst"
-        style={{ animationDelay: `${delay + 400}ms` }}
+        style={{ animationDelay: `${delay + 800}ms` }}
       >
         {sparks.map((spark) => (
           <Spark
@@ -89,7 +104,8 @@ function FireworkBurst({
             color={spark.color}
             angle={spark.angle}
             distance={spark.distance}
-            delay={delay + 400}
+            delay={delay + 800}
+            size={sparkSize}
           />
         ))}
         {innerSparks.map((spark) => (
@@ -98,16 +114,31 @@ function FireworkBurst({
             color={spark.color}
             angle={spark.angle}
             distance={spark.distance}
-            delay={delay + 450}
+            delay={delay + 850}
+            size={sparkSize * 0.8}
+          />
+        ))}
+        {outerSparks.map((spark) => (
+          <Spark
+            key={spark.id}
+            color={spark.color}
+            angle={spark.angle}
+            distance={spark.distance}
+            delay={delay + 750}
+            size={sparkSize * 0.7}
           />
         ))}
         {/* Center flash */}
-        <div 
-          className="absolute w-4 h-4 -ml-2 -mt-2 rounded-full animate-firework-flash"
-          style={{ 
+        <div
+          className="absolute rounded-full animate-firework-flash"
+          style={{
+            width: `${flashSize}px`,
+            height: `${flashSize}px`,
+            marginLeft: `-${flashSize / 2}px`,
+            marginTop: `-${flashSize / 2}px`,
             backgroundColor: colors[0],
-            boxShadow: `0 0 20px 10px ${colors[0]}`,
-            animationDelay: `${delay + 400}ms`
+            boxShadow: `0 0 ${flashSize * 5}px ${flashSize * 2}px ${colors[0]}`,
+            animationDelay: `${delay + 800}ms`
           }}
         />
       </div>
@@ -146,7 +177,7 @@ export default function AllDoneCelebration({ onComplete }: AllDoneCelebrationPro
   const { styleTheme } = useTheme()
   const [isVisible, setIsVisible] = useState(true)
   const [showText, setShowText] = useState(false)
-  
+
   // Theme-aware firework colors
   const getFireworkColors = (): string[][] => {
     const themeColors: Record<StyleTheme, string[][]> = {
@@ -194,9 +225,9 @@ export default function AllDoneCelebration({ onComplete }: AllDoneCelebrationPro
     }
     return themeColors[styleTheme] || themeColors['default']
   }
-  
+
   const colorSets = getFireworkColors()
-  
+
   // Generate multiple firework bursts at different positions and times
   const fireworks = [
     { x: 20, y: 60, colors: colorSets[0], delay: 0, size: 'large' as const },
@@ -210,29 +241,29 @@ export default function AllDoneCelebration({ onComplete }: AllDoneCelebrationPro
     { x: 30, y: 60, colors: colorSets[2 % colorSets.length], delay: 1500, size: 'small' as const },
     { x: 70, y: 55, colors: colorSets[0], delay: 1600, size: 'small' as const },
   ]
-  
+
   useEffect(() => {
-    // Show text after fireworks start
+    // Show text after fireworks start exploding
     const textTimer = setTimeout(() => {
       setShowText(true)
-    }, 600)
-    
+    }, 1000)
+
     // Hide celebration after animation completes
     const hideTimer = setTimeout(() => {
       setIsVisible(false)
       onComplete()
-    }, 4000)
-    
+    }, 5000)
+
     return () => {
       clearTimeout(textTimer)
       clearTimeout(hideTimer)
     }
   }, [onComplete])
-  
+
   if (!isVisible || typeof document === 'undefined') {
     return null
   }
-  
+
   return createPortal(
     <div className="fixed inset-0 z-[9999] pointer-events-none overflow-hidden bg-black/20">
       {/* Firework trails and bursts */}
@@ -253,7 +284,7 @@ export default function AllDoneCelebration({ onComplete }: AllDoneCelebrationPro
           />
         </div>
       ))}
-      
+
       {/* Celebration text */}
       {showText && (
         <div className="absolute inset-0 flex items-center justify-center">

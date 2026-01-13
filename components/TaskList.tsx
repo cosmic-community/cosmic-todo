@@ -126,8 +126,8 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
   const [isModalOpen, setIsModalOpen] = useState(false)
   // Changed: Track if we should show the "all done" celebration
   const [showAllDoneCelebration, setShowAllDoneCelebration] = useState(false)
-  // Changed: Track previous pending task count to detect transition to all done
-  const prevPendingCountRef = useRef<number | null>(null)
+  // Changed: Track if user just completed a task (for triggering celebration)
+  const justCompletedTaskRef = useRef(false)
 
   // Changed: Set up drag and drop sensors with touch support
   const sensors = useSensors(
@@ -297,32 +297,55 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
     }
   }, [])
 
+  // Changed: Ref for celebration timer
+  const celebrationTimerRef = useRef<NodeJS.Timeout | null>(null)
+
   // Changed: Detect when all tasks are completed and show celebration
   useEffect(() => {
+    // Only check if user just completed a task
+    if (!justCompletedTaskRef.current) {
+      return
+    }
+
     // Calculate real pending tasks (excluding celebrating ones since they're about to be completed)
     const realPendingCount = tasks.filter(
       task => !task.metadata.completed && !celebratingTasks.has(task.id)
     ).length
     const totalTasks = tasks.length
-    
+
     // Only show celebration if:
-    // 1. We have tasks (not an empty list)
-    // 2. We had pending tasks before
-    // 3. Now we have 0 pending tasks (all completed)
-    // 4. There are completed tasks (we actually completed something)
-    if (
-      prevPendingCountRef.current !== null &&
-      prevPendingCountRef.current > 0 &&
+    // 1. User just completed a task
+    // 2. Now we have 0 pending tasks (all completed)
+    // 3. We have tasks (not an empty list)
+    // 4. No timer already running
+    const shouldCelebrate =
       realPendingCount === 0 &&
       totalTasks > 0 &&
-      tasks.some(t => t.metadata.completed)
-    ) {
-      setShowAllDoneCelebration(true)
+      !celebrationTimerRef.current
+
+    if (shouldCelebrate) {
+      // Reset the flag
+      justCompletedTaskRef.current = false
+
+      // Wait a brief moment before showing the celebration
+      celebrationTimerRef.current = setTimeout(() => {
+        setShowAllDoneCelebration(true)
+        celebrationTimerRef.current = null
+      }, 400)
+    } else {
+      // Reset the flag if we're not celebrating
+      justCompletedTaskRef.current = false
     }
-    
-    // Update the ref for next comparison
-    prevPendingCountRef.current = realPendingCount
   }, [tasks, celebratingTasks])
+
+  // Changed: Cleanup timer on unmount only
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) {
+        clearTimeout(celebrationTimerRef.current)
+      }
+    }
+  }, [])
 
   // Handlers for optimistic updates
   // Changed: Scroll to top after adding task to fix mobile scroll issues
@@ -348,8 +371,9 @@ export default function TaskList({ initialTasks, lists, listSlug, onScrollToTop,
         const newCompletedState = !task.metadata.completed
         pendingStateChangesRef.current.set(taskId, { completed: newCompletedState })
 
-        // Changed: If task is becoming completed, add to celebrating set
+        // Changed: If task is becoming completed, add to celebrating set and mark that user just completed a task
         if (newCompletedState) {
+          justCompletedTaskRef.current = true
           setCelebratingTasks(prevCelebrating => {
             const newSet = new Set(prevCelebrating)
             newSet.add(taskId)

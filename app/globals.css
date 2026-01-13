@@ -263,7 +263,7 @@
 }
 
 .animate-firework-trail {
-  animation: firework-trail 0.4s ease-out forwards;
+  animation: firework-trail 0.8s ease-out forwards;
 }
 
 /* Changed: Firework launch (moves the burst container up) */
@@ -283,7 +283,7 @@
 }
 
 .animate-firework-launch {
-  animation: firework-launch 0.4s ease-out forwards;
+  animation: firework-launch 0.8s ease-out forwards;
 }
 
 /* Changed: Firework burst container fade */
