@@ -262,6 +262,29 @@
   }
 }
 
+/* Toast animations - slide in from right, slide out to right */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
 /* Changed: Safe area insets for iOS notch support */
 @supports (padding: max(0px)) {
   .safe-area-inset-top {

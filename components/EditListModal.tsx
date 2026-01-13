@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { List, User } from '@/types'
 import { X, Trash2, UserMinus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/contexts/AuthContext'
+import ConfirmationModal from './ConfirmationModal'
 
 interface EditListModalProps {
   list: List
@@ -37,6 +39,8 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   // Changed: Added state for tracking user removal
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
+  // Changed: Added state for user removal confirmation modal
+  const [userToRemove, setUserToRemove] = useState<User | null>(null)
   const modalRef = useRef<HTMLDivElement>(null)
   
   // Changed: Add escape key handler
@@ -78,10 +82,16 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
     return userObj.metadata?.display_name || userObj.title || 'Unknown User'
   }
 
-  // Changed: Handler for removing a shared user
-  const handleRemoveUser = async (userId: string) => {
-    if (removingUserId) return
+  // Changed: Handler to show confirmation modal for removing a user
+  const handleRemoveUserClick = (userObj: User) => {
+    setUserToRemove(userObj)
+  }
+
+  // Changed: Handler for actually removing a shared user after confirmation
+  const handleConfirmRemoveUser = async () => {
+    if (!userToRemove || removingUserId) return
     
+    const userId = userToRemove.id
     setRemovingUserId(userId)
     
     try {
@@ -112,6 +122,7 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
       }
       
       toast.success('User removed from list')
+      setUserToRemove(null)
     } catch (error) {
       console.error('Error removing user:', error)
       toast.error('Failed to remove user')
@@ -165,11 +176,6 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
     setIsDeleting(true)
     const listName = list.metadata.name
     
-    // Optimistically delete and close immediately
-    onOptimisticDelete(list.id)
-    onClose()
-    
-    // Send to server in background
     try {
       const response = await fetch(`/api/lists/${list.id}`, {
         method: 'DELETE'
@@ -179,6 +185,9 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
         throw new Error('Failed to delete list')
       }
       
+      // Only update UI and close after successful deletion
+      onOptimisticDelete(list.id)
+      onClose()
       toast.success(`List "${listName}" deleted`)
     } catch (error) {
       console.error('Error deleting list:', error)
@@ -190,8 +199,9 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
 
   const sharedUsers = getSharedUsers()
   const ownerCanEdit = isOwner() || !list.metadata.owner
-  
-  return (
+
+  // Changed: Use portal to render modal at document body level to escape stacking context issues
+  const modalContent = (
     <div 
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-50"
       onClick={handleBackdropClick}
@@ -211,33 +221,7 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
           </button>
         </div>
         
-        {showDeleteConfirm ? (
-          <div className="p-4 space-y-4">
-            <p className="text-gray-700 dark:text-gray-300">
-              Are you sure you want to delete &quot;{list.metadata.name}&quot;? This action cannot be undone.
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Note: Tasks in this list will not be deleted, but they will no longer be associated with this list.
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete List'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Name
@@ -317,7 +301,7 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
                       {ownerCanEdit && (
                         <button
                           type="button"
-                          onClick={() => handleRemoveUser(sharedUser.id)}
+                          onClick={() => handleRemoveUserClick(sharedUser)}
                           disabled={removingUserId === sharedUser.id}
                           className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-50"
                           title="Remove user"
@@ -375,8 +359,44 @@ export default function EditListModal({ list, onClose, onOptimisticUpdate, onOpt
               </button>
             </div>
           </form>
-        )}
       </div>
+
+      {/* Delete List Confirmation Modal */}
+      {showDeleteConfirm && (
+        <ConfirmationModal
+          title="Delete List"
+          message={`Are you sure you want to delete "${list.metadata.name}"? This action cannot be undone.`}
+          secondaryMessage="Note: Tasks in this list will not be deleted, but they will no longer be associated with this list."
+          confirmLabel="Delete List"
+          cancelLabel="Cancel"
+          confirmVariant="danger"
+          isLoading={isDeleting}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+
+      {/* Remove User Confirmation Modal */}
+      {userToRemove && (
+        <ConfirmationModal
+          title="Remove User"
+          message={`Are you sure you want to remove ${getUserDisplayName(userToRemove)} from this list?`}
+          secondaryMessage="They will no longer have access to view or edit tasks in this list."
+          confirmLabel="Remove User"
+          cancelLabel="Cancel"
+          confirmVariant="danger"
+          isLoading={removingUserId === userToRemove.id}
+          onConfirm={handleConfirmRemoveUser}
+          onCancel={() => setUserToRemove(null)}
+        />
+      )}
     </div>
   )
+
+  // Changed: Render using portal to escape parent stacking contexts
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body)
+  }
+  
+  return modalContent
 }
