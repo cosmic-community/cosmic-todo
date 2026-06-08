@@ -175,12 +175,9 @@ export default function LoginPage() {
             </button>
           </form>
           
-          {/* Footer */}
-          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
-              Sign up
-            </Link>
+          {/* Changed: Removed signup link - signup is disabled */}
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            Contact an administrator to create an account
           </p>
         </div>
       </div>
